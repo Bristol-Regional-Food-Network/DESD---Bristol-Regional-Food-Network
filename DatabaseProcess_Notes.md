@@ -1,144 +1,171 @@
-Docker Database Setup
+# Database Design & Implementation
 
-Using the provided repository setup, the PostgreSQL database was configured inside a dedicated Docker container. The database service is defined in docker-compose.yml using the postgres:16 image.
+### DESD – Distributed & Enterprise Software Development
 
-The .env file contains the database credentials:
+I integrated **PostgreSQL** into the **Django** application and configured it to run inside a **Docker** container.
+The goal was to separate the database from the application layer and ensure persistence using Docker volumes.
 
-DB_NAME=django_db
-DB_USER=django_user
-DB_PASSWORD=django_password
-DB_HOST=db
-DB_PORT=5432
+The database schema was implemented using Django ORM (Object-Relational Mapping), which maps Python models to database tables, and managed through migrations.
 
-The host is set to db, which matches the service name inside Docker Compose. This allows internal container communication.
 
-To build and start the containers:
+### Database Setup 
 
-docker compose up --build
+___
+
+To containerise the database, I configured a PostgreSQL service inside **docker-compose.yml** using the official **postgres:16** image.
+
+I defined the database credentials inside the .env file:
+
+        DB_NAME=django_db
+        DB_USER=django_user
+        DB_PASSWORD=django_password
+        DB_HOST=db
+        DB_PORT=5432
+
+The **DB_HOST** is set to **db** because this matches the service name of the **PostgreSQL** container. Docker automatically creates internal networking between services, allowing the Django container to connect to the database container.
+
+### Installing the Database Driver
+---
+
+To allow Django to communicate with PostgreSQL, I added the required adapter to requirements.txt:
+
+        psycopg2-binary
+
+<br>
+
+This package enables Django ORM to send SQL queries to the PostgreSQL database.
+After adding it, I rebuilt the containers to ensure the dependency was installed inside the Django container.
+
+### Running the Database
+---
+
+<br>
+
+To build and start both the application and database containers, I used:
+
+        docker compose up --build
+
+This command:
+
+* Builds the Django container
+
+* Starts the PostgreSQL container
+
+* Waits until the database is ready
+
+* Applies migrations automatically
+
+* Launches the Django development server
 
 To run in detached mode:
 
-docker compose up -d --build
+        docker compose up -d --build
 
-The database uses a Docker volume (postgres_data) to ensure persistence across container restarts.
 
-Database Driver Installation
+### Implementing the Database Schema
+---
+<br>
 
-To enable Django to communicate with PostgreSQL, the required database adapter was added to requirements.txt:
+The database structure was defined in **marketplace/models.py**.
 
-psycopg2-binary
+The models I implemented include:
 
-This library allows Django ORM to connect to the PostgreSQL database engine.
+* Producer
 
-Connection flow:
+* Customer
 
-Django ORM → psycopg2 → PostgreSQL container
+* Category
 
-Implemented Data Models
+* Product
 
-The database schema was defined in:
+* Inventory
 
-marketplace/models.py
+* Order
 
-The models represent the core marketplace structure:
+* OrderItem
 
-Producer (linked to Django User)
+* Payment
 
-Customer
+* PayoutBatch
 
-Category
+* ProducerPayout
 
-Product (Foreign Key to Producer and Category)
+* ProducerPayoutLine
 
-Inventory (One-to-One with Product)
+These models establish relationships such as:
 
-Order
+- One-to-Many (Producer → Product)
 
-OrderItem
+- One-to-One (Product → Inventory)
 
-Payment
+- One-to-Many (Order → OrderItem)
 
-PayoutBatch
+- One-to-One (Order → Payment)
 
-ProducerPayout
+#### I also implemented constraints such as:
 
-ProducerPayoutLine
+- Unique customer email
 
-Constraints implemented include:
+- Non-negative product pricing
 
-Unique email for customers
+- Unique product name per producer
 
-Non-negative product pricing
+- Foreign key relationships to enforce referential integrity
 
-Unique product name per producer
+- Applying Migrations
 
-One-to-one relationships for inventory and payments
+To create the database tables from the models, I used **Django migrations**.
 
-Foreign key constraints to enforce relational integrity
+Initial migration file:
 
-Applying Database Migrations
-
-The initial schema was created using Django migrations located in:
-
-marketplace/migrations/0001_initial.py
+        marketplace/migrations/0001_initial.py
 
 To apply migrations:
 
-docker compose exec web python manage.py migrate
+        docker compose exec web python manage.py migrate
 
-To create new migrations after modifying models:
+When updating models, I generated new migrations using:
 
-docker compose exec web python manage.py makemigrations
-docker compose exec web python manage.py migrate
+        docker compose exec web python manage.py makemigrations
+d       ocker compose exec web python manage.py migrate
 
-Migrations convert model definitions into SQL commands executed in PostgreSQL.
+This ensured that the database schema remained synchronised with the model definitions.
 
-Accessing the Database
+### Accessing the Database
+---
+<br>
+To inspect the database directly inside the PostgreSQL container, I used:
 
-To access PostgreSQL directly inside the container:
+        docker compose exec db psql -U django_user -d django_db
 
-docker compose exec db psql -U django_user -d django_db
+Useful PostgreSQL commands:
 
-To list all tables:
+        \dt              -- Lists all tables in the current database
+        \d table_name    -- Shows the structure (columns, keys, constraints) of a specific table
+        \q               -- Exits the PostgreSQL shell
 
-\dt
+This allowed me to verify that the tables were created correctly and that relationships were properly enforced.
 
-To describe a table:
+### Database Persistence
+---
+<br>
+To ensure that data is not lost when containers restart, I configured a Docker volume:
 
-\d table_name
+        postgres_data
 
-To exit:
+This stores PostgreSQL data outside the container lifecycle.
 
-\q
+To completely reset the database when needed:
 
-Alternatively, Django’s database shell can be accessed using:
+        docker compose down -v
+        docker compose up --build
 
-docker compose exec web python manage.py dbshell
-Using Django Admin for CRUD Operations
+The **-v** flag removes the persistent volume and deletes all stored data.
 
-The models were registered in their respective admin.py files to enable database interaction via Django Admin.
+## Summary
 
-After creating a superuser:
+Through this setup, I successfully containerised PostgreSQL, configured Django to use it via environment variables, and implemented a relational schema using Django ORM.
 
-docker compose exec web python manage.py createsuperuser
+The database enforces integrity through constraints and foreign key relationships, and persistence is maintained using Docker volumes.
 
-The admin interface can be accessed at:
-
-http://localhost:8000/admin
-
-This interface allows creation, modification, and deletion of database records for testing and validation.
-
-Database Reset
-
-To completely reset the database and remove stored data:
-
-docker compose down -v
-docker compose up --build
-
-The -v flag removes the PostgreSQL volume and deletes all stored records.
-
-Summary
-
-The database layer has been fully containerised using PostgreSQL within Docker. Django ORM manages schema definition and migrations, while PostgreSQL enforces relational constraints and transactional integrity.
-
-The use of Docker volumes ensures persistence, and the separation of application and database containers provides modular and scalable architecture suitable for enterprise-level development.
+This architecture ensures separation between the application and data layers while maintaining consistency across development environments.
