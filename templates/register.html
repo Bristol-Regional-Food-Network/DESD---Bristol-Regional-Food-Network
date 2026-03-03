@@ -1,0 +1,8 @@
+<h2>Create an account</h2>
+
+<!-- Simple registration form that includes username, email, password, and role fields -->
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Register</button>
+</form>
