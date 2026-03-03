@@ -1,0 +1,16 @@
+<!-- Simple login template -->
+<h2>Login</h2>
+
+<!-- Simple login form that includes username and password fields -->
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Login</button>
+</form>
+
+<!-- Link to the registration page for users who do not have an account -->
+<div style="margin-top: 20px;">
+    <a href="{% url 'register' %}">
+        <button type="button">Create an account</button>
+    </a>
+</div>
