@@ -1,34 +1,8 @@
-Database Design and Implementation
-1. Overview
+Docker Database Setup
 
-This project uses PostgreSQL as the relational database management system and Django ORM to define and manage the schema. The database runs inside a dedicated Docker container and communicates with the Django application container through Docker Compose.
+Using the provided repository setup, the PostgreSQL database was configured inside a dedicated Docker container. The database service is defined in docker-compose.yml using the postgres:16 image.
 
-The goal of this setup is to separate application logic from data storage while ensuring portability, persistence, and structured relational integrity.
-
-2. Database Technology and Libraries
-Database System
-
-PostgreSQL 16 (Docker container)
-
-ORM
-
-Django ORM
-
-Required Python Library
-
-The PostgreSQL driver used by Django is included in requirements.txt:
-
-psycopg2-binary
-
-This library enables communication between:
-
-Django ORM → psycopg2 → PostgreSQL
-
-Without this dependency, Django cannot connect to the PostgreSQL database.
-
-3. Environment Configuration
-
-Database credentials are stored in the .env file:
+The .env file contains the database credentials:
 
 DB_NAME=django_db
 DB_USER=django_user
@@ -36,228 +10,135 @@ DB_PASSWORD=django_password
 DB_HOST=db
 DB_PORT=5432
 
-Important detail:
+The host is set to db, which matches the service name inside Docker Compose. This allows internal container communication.
 
-DB_HOST=db works because db is the service name defined in docker-compose.yml. Docker automatically creates internal networking between containers.
+To build and start the containers:
 
-In settings.py, Django reads these values:
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME'),
-        'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASSWORD'),
-        'HOST': os.environ.get('DB_HOST'),
-        'PORT': os.environ.get('DB_PORT'),
-    }
-}
-4. Docker Database Setup
-
-The database service is defined in docker-compose.yml using:
-
-Image: postgres:16
-
-Port mapping: 5432:5432
-
-Persistent volume: postgres_data
-
-The volume ensures that data remains stored even if containers are restarted.
-
-5. Running the Database (Execution Phases)
-Phase 1 – Build and Start Containers
 docker compose up --build
 
-This command:
-
-Builds the Django image
-
-Starts the PostgreSQL container
-
-Waits for the database to be ready
-
-Applies migrations
-
-Starts the Django development server
-
-To run in background:
+To run in detached mode:
 
 docker compose up -d --build
-Phase 2 – Apply Migrations
 
-If migrations are not applied automatically:
+The database uses a Docker volume (postgres_data) to ensure persistence across container restarts.
+
+Database Driver Installation
+
+To enable Django to communicate with PostgreSQL, the required database adapter was added to requirements.txt:
+
+psycopg2-binary
+
+This library allows Django ORM to connect to the PostgreSQL database engine.
+
+Connection flow:
+
+Django ORM → psycopg2 → PostgreSQL container
+
+Implemented Data Models
+
+The database schema was defined in:
+
+marketplace/models.py
+
+The models represent the core marketplace structure:
+
+Producer (linked to Django User)
+
+Customer
+
+Category
+
+Product (Foreign Key to Producer and Category)
+
+Inventory (One-to-One with Product)
+
+Order
+
+OrderItem
+
+Payment
+
+PayoutBatch
+
+ProducerPayout
+
+ProducerPayoutLine
+
+Constraints implemented include:
+
+Unique email for customers
+
+Non-negative product pricing
+
+Unique product name per producer
+
+One-to-one relationships for inventory and payments
+
+Foreign key constraints to enforce relational integrity
+
+Applying Database Migrations
+
+The initial schema was created using Django migrations located in:
+
+marketplace/migrations/0001_initial.py
+
+To apply migrations:
 
 docker compose exec web python manage.py migrate
 
-To create new migrations after editing models:
+To create new migrations after modifying models:
 
 docker compose exec web python manage.py makemigrations
 docker compose exec web python manage.py migrate
 
-Migrations convert Django model definitions into SQL statements executed in PostgreSQL.
+Migrations convert model definitions into SQL commands executed in PostgreSQL.
 
-Phase 3 – Access the Database
+Accessing the Database
 
-To access PostgreSQL directly:
+To access PostgreSQL directly inside the container:
 
 docker compose exec db psql -U django_user -d django_db
 
-List tables:
+To list all tables:
 
 \dt
 
-Describe a table:
+To describe a table:
 
 \d table_name
 
-Exit:
+To exit:
 
 \q
 
-Alternatively, access via Django:
+Alternatively, Django’s database shell can be accessed using:
 
 docker compose exec web python manage.py dbshell
-Phase 4 – Reset the Database
+Using Django Admin for CRUD Operations
 
-To completely remove all stored data:
+The models were registered in their respective admin.py files to enable database interaction via Django Admin.
+
+After creating a superuser:
+
+docker compose exec web python manage.py createsuperuser
+
+The admin interface can be accessed at:
+
+http://localhost:8000/admin
+
+This interface allows creation, modification, and deletion of database records for testing and validation.
+
+Database Reset
+
+To completely reset the database and remove stored data:
 
 docker compose down -v
 docker compose up --build
 
-The -v flag removes the Docker volume and deletes all database data.
+The -v flag removes the PostgreSQL volume and deletes all stored records.
 
-6. Database Schema Structure
+Summary
 
-The schema is defined in:
+The database layer has been fully containerised using PostgreSQL within Docker. Django ORM manages schema definition and migrations, while PostgreSQL enforces relational constraints and transactional integrity.
 
-marketplace/models.py
-
-Initial migration:
-
-marketplace/migrations/0001_initial.py
-Core Entities
-
-Producer
-
-Linked to Django User model
-
-Stores producer information
-
-Customer
-
-Stores buyer details
-
-Email is unique
-
-Category
-
-Product classification
-
-Unique name
-
-Product
-
-Linked to Producer (Foreign Key)
-
-Linked to Category (Foreign Key)
-
-Stores pricing, description, flags
-
-Unique product name per producer
-
-Price must be non-negative
-
-Inventory
-
-One-to-one relationship with Product
-
-Tracks stock and availability dates
-
-Orders and Payments
-
-Order
-
-Linked to Customer
-
-Stores totals, status, timestamps
-
-OrderItem
-
-Linked to Order
-
-Linked to Product
-
-Stores purchase-time pricing
-
-Payment
-
-One-to-one relationship with Order
-
-Stores provider and payment status
-
-This design preserves transactional integrity and historical pricing.
-
-Financial Payout System
-
-PayoutBatch
-
-Defines payout periods
-
-ProducerPayout
-
-Linked to Producer and PayoutBatch
-
-Stores commission and net payable
-
-ProducerPayoutLine
-
-Linked to OrderItem
-
-Ensures payout traceability
-
-7. Data Integrity and Constraints
-
-The database enforces integrity through:
-
-Foreign key constraints
-
-One-to-one relationships
-
-Unique constraints
-
-Check constraints
-
-Indexed fields for performance
-
-This ensures relational consistency and prevents invalid data storage.
-
-8. Database Persistence
-
-The database uses a Docker-managed volume:
-
-postgres_data
-
-This guarantees that:
-
-Data survives container restarts
-
-Schema and records remain stored
-
-The database is only cleared when explicitly removed
-
-9. Database Connection Flow
-
-The connection process follows this structure:
-
-Browser
-→ Django application container
-→ psycopg2 database driver
-→ PostgreSQL container
-
-Docker networking allows the Django container to reach PostgreSQL using the hostname db.
-
-Conclusion
-
-The database implementation uses a containerised PostgreSQL instance integrated with Django ORM. Schema management is handled through migrations, data integrity is enforced at the database level, and persistence is maintained using Docker volumes.
-
-This architecture supports modular development, financial traceability, and scalable relational data management.
+The use of Docker volumes ensures persistence, and the separation of application and database containers provides modular and scalable architecture suitable for enterprise-level development.
