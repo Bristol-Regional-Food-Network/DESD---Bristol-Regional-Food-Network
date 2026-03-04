@@ -87,7 +87,7 @@ class Product(models.Model):
         ]
         unique_together = [("producer", "name")]
         constraints = [
-            models.CheckConstraint(check=Q(price__gte=0), name="product_price_nonnegative"),
+            models.CheckConstraint(condition=Q(price__gte=0), name="product_price_nonnegative"),
         ]
 
     def __str__(self):
@@ -106,9 +106,13 @@ class Inventory(models.Model):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(check=Q(stock_qty__gte=0), name="inventory_stock_nonnegative"),
+            models.CheckConstraint(condition=Q(stock_qty__gte=0), name="inventory_stock_nonnegative"),
             models.CheckConstraint(
-                check=Q(available_from__isnull=True) | Q(available_to__isnull=True) | Q(available_to__gte=models.F("available_from")),
+                condition=(
+                    Q(available_from__isnull=True)
+                    | Q(available_to__isnull=True)
+                    | Q(available_to__gte=models.F("available_from"))
+                ),
                 name="inventory_valid_availability_range",
             ),
         ]
@@ -155,7 +159,7 @@ class Order(models.Model):
         for item in self.items.all():
             subtotal += item.line_total
 
-        commission = (subtotal * Decimal("0.05")).quantize(Decimal("0.01"))
+        commission = (subtotal * COMMISSION_RATE_DEFAULT).quantize(Decimal("0.01"))
         total = subtotal  # customer pays subtotal; commission deducted from producer settlements
 
         self.subtotal_amount = subtotal
@@ -196,8 +200,8 @@ class OrderItem(models.Model):
             models.Index(fields=["product"]),
         ]
         constraints = [
-            models.CheckConstraint(check=Q(quantity__gte=1), name="orderitem_quantity_positive"),
-            models.CheckConstraint(check=Q(line_total__gte=0), name="orderitem_line_total_nonnegative"),
+            models.CheckConstraint(condition=Q(quantity__gte=1), name="orderitem_quantity_positive"),
+            models.CheckConstraint(condition=Q(line_total__gte=0), name="orderitem_line_total_nonnegative"),
         ]
 
     def clean(self):
@@ -259,7 +263,7 @@ class PayoutBatch(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["week_start", "week_end"], name="uniq_payout_batch_period"),
-            models.CheckConstraint(check=Q(week_end__gte=models.F("week_start")), name="payoutbatch_valid_range"),
+            models.CheckConstraint(condition=Q(week_end__gte=models.F("week_start")), name="payoutbatch_valid_range"),
         ]
 
     def __str__(self):
@@ -290,7 +294,7 @@ class ProducerPayout(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["batch", "producer"], name="uniq_producer_payout_per_batch"),
-            models.CheckConstraint(check=Q(commission_rate__gte=0), name="producerpayout_commission_rate_nonnegative"),
+            models.CheckConstraint(condition=Q(commission_rate__gte=0), name="producerpayout_commission_rate_nonnegative"),
         ]
         indexes = [
             models.Index(fields=["producer"]),
@@ -319,7 +323,13 @@ class ProducerPayout(models.Model):
 class ProducerPayoutLine(models.Model):
     producer_payout = models.ForeignKey(ProducerPayout, on_delete=models.CASCADE, related_name="lines")
     order_item = models.OneToOneField(OrderItem, on_delete=models.PROTECT, related_name="payout_line")
-    gross_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal("0.00"))])
+    gross_amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        null=True,
+        blank=True,
+    )
 
     def save(self, *args, **kwargs):
         # Default gross_amount to the order item line total if not provided
@@ -345,7 +355,7 @@ class PostcodeDistance(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["from_postcode", "to_postcode"], name="uniq_postcode_pair"),
-            models.CheckConstraint(check=Q(distance_km__gte=0), name="postcodedistance_nonnegative"),
+            models.CheckConstraint(condition=Q(distance_km__gte=0), name="postcodedistance_nonnegative"),
         ]
         indexes = [
             models.Index(fields=["from_postcode", "to_postcode"]),
@@ -373,8 +383,11 @@ class SurplusOffer(models.Model):
             models.Index(fields=["starts_at", "ends_at"]),
         ]
         constraints = [
-            models.CheckConstraint(check=Q(discount_percent__gte=0) & Q(discount_percent__lte=100), name="surplus_discount_percent_range"),
-            models.CheckConstraint(check=Q(ends_at__gt=models.F("starts_at")), name="surplus_valid_time_window"),
+            models.CheckConstraint(
+                condition=Q(discount_percent__gte=0) & Q(discount_percent__lte=100),
+                name="surplus_discount_percent_range",
+            ),
+            models.CheckConstraint(condition=Q(ends_at__gt=models.F("starts_at")), name="surplus_valid_time_window"),
         ]
 
     def clean(self):
