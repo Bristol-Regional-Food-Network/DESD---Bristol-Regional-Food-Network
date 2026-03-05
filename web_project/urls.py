@@ -23,4 +23,5 @@ urlpatterns = [
     # If you have these apps:
     path("products/", include("products.urls")),
     path("producer/", include("producers.urls")),
+
 ]

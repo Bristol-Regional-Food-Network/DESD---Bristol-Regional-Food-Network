@@ -1,14 +1,28 @@
-from django.shortcuts import render, get_object_or_404
-from .models import Product
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.urls import reverse
 
-def product_list(request):
-    q = request.GET.get("q", "").strip()
-    products = Product.objects.select_related("producer").all().order_by("name")
-    if q:
-        products = products.filter(name__icontains=q)
+from users.decorators import role_required
+from producers.models import Producer
+from .forms import ProductForm
 
-    return render(request, "products/product_list.html", {"products": products, "q": q})
+@login_required
+@role_required("producer")
+def add_product(request):
+    # Create Producer profile if missing
+    producer, _ = Producer.objects.get_or_create(
+        user=request.user,
+        defaults={"display_name": request.user.get_full_name() or request.user.username},
+    )
 
-def product_detail(request, pk):
-    product = get_object_or_404(Product.objects.select_related("producer"), pk=pk)
-    return render(request, "products/product_detail.html", {"product": product})
+    if request.method == "POST":
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            product = form.save(commit=False)
+            product.producer = producer
+            product.save()
+            return redirect(reverse("producers:producer_dashboard"))
+    else:
+        form = ProductForm()
+
+    return render(request, "products/add_product.html", {"form": form})

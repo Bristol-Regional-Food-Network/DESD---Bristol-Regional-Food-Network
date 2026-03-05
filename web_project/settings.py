@@ -33,9 +33,9 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # Local apps
     "core",
-    "users",
     "products",
     "producers",
+    "users.apps.UsersConfig",
 ]
 
 MIDDLEWARE = [
@@ -103,5 +103,5 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-LOGIN_REDIRECT_URL = "post_login_redirect"
+LOGIN_REDIRECT_URL = "/post-login/"
 LOGOUT_REDIRECT_URL = "home"

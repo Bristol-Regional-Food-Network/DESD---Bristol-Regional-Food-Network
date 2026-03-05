@@ -1,17 +1,12 @@
-from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
-from users.models import UserProfile
+from django.shortcuts import redirect
 
 @login_required
 def post_login_redirect(request):
-    """
-    Redirect users after login based on their role.
-    Producer -> producer dashboard
-    Customer -> home (or product list if you prefer)
-    """
-    profile = UserProfile.objects.filter(user=request.user).first()
+    # If using UserProfile.role
+    profile = getattr(request.user, "userprofile", None)
+    role = getattr(profile, "role", "customer")
 
-    if profile and profile.role == "producer":
-        return redirect("producer_dashboard")
-
-    return redirect("home")
+    if role == "producer":
+        return redirect("producer_dashboard")  # <-- create this url name
+    return redirect("home")  # or redirect("products_list")

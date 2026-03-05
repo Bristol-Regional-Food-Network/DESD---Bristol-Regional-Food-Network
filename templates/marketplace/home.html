@@ -16,7 +16,7 @@
 
         {# Producer shortcut (safe: only show if profile exists and role is producer) #}
         {% if user.userprofile and user.userprofile.role == "producer" %}
-          <a class="btn btn-warning" href="{% url 'producer_dashboard' %}">Producer Dashboard</a>
+          <a class="btn btn-warning" href="{% url 'producers:producer_dashboard' %}">Producer Dashboard</a>
         {% endif %}
 
         {# If you already created products pages, uncomment this #}
@@ -96,7 +96,7 @@
 
       {% if user.is_authenticated %}
         {% if user.userprofile and user.userprofile.role == "producer" %}
-          <a class="btn btn-warning" href="{% url 'producer_dashboard' %}">Go to Dashboard</a>
+          <a class="btn btn-warning" href="{% url 'producers:producer_dashboard' %}">Go to Dashboard</a>
         {% else %}
           <span class="text-muted">Log in with a producer account to access the dashboard.</span>
         {% endif %}
