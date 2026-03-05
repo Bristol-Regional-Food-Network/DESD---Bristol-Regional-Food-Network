@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "users",
     "products",
     "producers",
+    "customers",
 ]
 
 MIDDLEWARE = [
@@ -105,3 +106,7 @@ MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 LOGIN_REDIRECT_URL = "post_login_redirect"
 LOGOUT_REDIRECT_URL = "home"
+
+LOGIN_URL = "login"
+LOGIN_REDIRECT_URL = "post_login_redirect"   # optional but recommended
+LOGOUT_REDIRECT_URL = "home"                 # optional

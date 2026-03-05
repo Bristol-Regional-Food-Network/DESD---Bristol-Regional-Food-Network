@@ -1,0 +1,34 @@
+{% extends "base/base.html" %}
+{% block title %}Products | BRFN{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+  <h1 class="h3 mb-0">Products</h1>
+
+  <form class="d-flex gap-2" method="get">
+    <input class="form-control" type="search" name="q" value="{{ q }}" placeholder="Search products...">
+    <button class="btn btn-outline-dark" type="submit">Search</button>
+  </form>
+</div>
+
+{% if products %}
+  <div class="row g-3">
+    {% for p in products %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body">
+            <h2 class="h6 mb-1">{{ p.name }}</h2>
+            <div class="small text-muted mb-2">Producer: {{ p.producer.farm_name }}</div>
+            <div class="fw-bold mb-2">£{{ p.price }}</div>
+            <a class="btn btn-sm btn-dark" href="{% url 'product_detail' p.id %}">View</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">
+    No products found.
+  </div>
+{% endif %}
+{% endblock %}
