@@ -3,17 +3,21 @@
 
 {% if user.is_authenticated %}
     <p>You are logged in as <strong>{{ user.username }}</strong>.</p>
-    <p>Your role: <strong>{{ profile.role }}</strong></p>
+    {% if profile %}
+        <p>Your role: <strong>{{ profile.role }}</strong></p>
 
-    <!-- Display different buttons based on the user's role to navigate to the appropriate test pages -->
-    {% if profile.role == 'producer' %}
-        <a href="{% url 'producer-test' %}">
-            <button>Go to Producer Test Page</button>
-        </a>
-    {% elif profile.role == 'customer' %}
-        <a href="{% url 'customer-test' %}">
-            <button>Go to Customer Test Page</button>
-        </a>
+        <!-- Display different buttons based on the user's role to navigate to the appropriate test pages -->
+        {% if profile.role == 'producer' %}
+            <a href="{% url 'producer-test' %}">
+                <button>Go to Producer Test Page</button>
+            </a>
+        {% elif profile.role == 'customer' %}
+            <a href="{% url 'customer-test' %}">
+                <button>Go to Customer Test Page</button>
+            </a>
+        {% endif %}
+    {% else %}
+        <p>No role assigned to your account yet.</p>
     {% endif %}
 
     <!-- Logout button that allows the user to log out of their account -->
