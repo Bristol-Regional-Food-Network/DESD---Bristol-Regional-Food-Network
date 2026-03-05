@@ -15,3 +15,6 @@ How to test locally:
 3. Make a superuser: `docker compose exec web python manage.py createsuperuser`
 4. Visit http://localhost:8000 and try logging in.
 
+I already created a superuser :
+- username : root
+- password : Adham-135
