@@ -3,7 +3,6 @@
 {% block title %}Producer Dashboard{% endblock %}
 
 {% block content %}
-<a class="btn btn-success" href="{% url 'products:add' %}">Add product</a>
 <div class="container">
   <h1 class="mb-3">Producer Dashboard</h1>
 
@@ -11,6 +10,7 @@
     <p class="text-muted">Welcome, {{ producer }}</p>
   {% endif %}
 
+  <a class="btn btn-success" href="{% url 'products:add' %}">Add product</a>
   <h4 class="mt-4">My Products</h4>
   {% if my_products %}
     <ul class="list-group">
