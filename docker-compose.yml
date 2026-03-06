@@ -1,28 +1,40 @@
+version: "3.9"
+
 services:
+  db:
+    image: postgres:16
+    container_name: bristol_food_db1
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: bristol_food_web1
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
     ports:
       - "8000:8000"
     env_file:
       - .env
     depends_on:
-      - db
-    volumes:
-      - .:/app  # dev convenience: live reload code in container
-    command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
-
-  db:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: django_db
-      POSTGRES_USER: django_user
-      POSTGRES_PASSWORD: django_pass
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:

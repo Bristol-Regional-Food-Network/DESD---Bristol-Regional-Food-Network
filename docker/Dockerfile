@@ -5,7 +5,6 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# system deps (psycopg needs build tooling sometimes)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -16,7 +15,6 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 COPY . /app/
 
-# optional: for Django static files
 RUN python manage.py collectstatic --noinput || true
 
 CMD ["gunicorn", "web_project.wsgi:application", "--bind", "0.0.0.0:8000"]
