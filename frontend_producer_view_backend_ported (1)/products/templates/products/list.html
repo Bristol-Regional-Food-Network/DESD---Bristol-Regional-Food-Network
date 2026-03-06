@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Products</title>
+</head>
+<body>
+
+<h1>Products</h1>
+
+<ul>
+{% for product in products %}
+    <li>{{ product.name }}</li>
+{% empty %}
+    <li>No products yet</li>
+{% endfor %}
+</ul>
+
+</body>
+</html>
