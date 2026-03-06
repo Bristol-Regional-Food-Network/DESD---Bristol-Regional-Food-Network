@@ -1,0 +1,28 @@
+{% extends "base/base.html" %}
+
+{% block title %}Producer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-3">Producer Dashboard</h1>
+
+  {% if producer %}
+    <p class="text-muted">Welcome, {{ producer }}</p>
+  {% endif %}
+
+  <a class="btn btn-success" href="{% url 'products:add' %}">Add product</a>
+  <h4 class="mt-4">My Products</h4>
+  {% if my_products %}
+    <ul class="list-group">
+      {% for p in my_products %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          {{ p.name }}
+          <span class="badge bg-secondary">{{ p.price }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">No products yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
