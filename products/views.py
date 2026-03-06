@@ -4,16 +4,26 @@ from django.contrib import messages
 
 from users.decorators import role_required
 from .models import Product
+from producers.models import Producer
+
+
+def product_list(request):
+    products = Product.objects.select_related("producer").all().order_by("-id")
+    return render(request, "products/product_list.html", {"products": products})
+
+
+def product_detail(request, product_id):
+    product = Product.objects.select_related("producer").get(id=product_id)
+    return render(request, "products/product_detail.html", {"product": product})
 
 
 @login_required
 @role_required("producer")
 def add_product(request):
-    producer = getattr(request.user, "producer", None)
+    producer = Producer.objects.filter(user=request.user).first()
 
-    # If role_required let someone through but profile missing, don't crash
     if producer is None:
-        messages.error(request, "Producer profile not found. Please complete producer registration.")
+        messages.error(request, "Producer profile not found.")
         return redirect("producers:producer_dashboard")
 
     if request.method == "POST":

@@ -11,18 +11,25 @@
     </p>
 
     {% if user.is_authenticated %}
-      <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-dark" href="{% url 'home' %}">Go to Home</a>
+  <div class="d-flex flex-wrap gap-2">
 
-        {# Producer shortcut (safe: only show if profile exists and role is producer) #}
-        {% if user.userprofile and user.userprofile.role == "producer" %}
-          <a class="btn btn-warning" href="{% url 'producers:producer_dashboard' %}">Producer Dashboard</a>
-        {% endif %}
+    <a class="btn btn-dark" href="{% url 'home' %}">Go to Home</a>
 
-        {# If you already created products pages, uncomment this #}
-        {# <a class="btn btn-outline-dark" href="{% url 'product_list' %}">Browse Products</a> #}
+    {# Producer shortcut #}
+    {% if user.userprofile and user.userprofile.role == "producer" %}
+      <a class="btn btn-warning" href="{% url 'producers:producer_dashboard' %}">
+        Producer Dashboard
+      </a>
+    {% endif %}
 
-      </div>
+    {# Customer shortcut #}
+    {% if user.userprofile and user.userprofile.role == "customer" %}
+      <a class="btn btn-primary" href="{% url 'customer_dashboard' %}">
+        Customer Dashboard
+      </a>
+    {% endif %}
+
+  </div>
     {% else %}
       <div class="d-flex flex-wrap gap-2">
         <a class="btn btn-dark" href="{% url 'login' %}">Login</a>
