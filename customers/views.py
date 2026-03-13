@@ -1,32 +1,56 @@
-from django.shortcuts import render
-from django.db.models import Q
-from users.decorators import role_required
-
-# Import your Product model
+from django.shortcuts import get_object_or_404, redirect, render
 from products.models import Product
 
-# @role_required("customer")
+
 def dashboard(request):
-    """
-    Customer dashboard:
-    - product search (read operations)
-    - latest products list
-    """
-    q = request.GET.get("q", "").strip()
+    products = Product.objects.select_related("producer").all()[:4]
+    return render(request, "customers/dashboard.html", {
+        "products": products,
+    })
 
-    products_qs = Product.objects.select_related("producer").all()
 
-    if q:
-        products_qs = products_qs.filter(
-            Q(name__icontains=q) |
-            Q(description__icontains=q) |
-            Q(producer__farm_name__icontains=q)
-        )
+def saved_products(request):
+    saved = request.session.get("saved_products", {})
+    items = []
 
-    latest_products = products_qs.order_by("-id")[:9]  # simple "latest" ordering
+    for product_id, item in saved.items():
+        items.append({
+            "product_id": product_id,
+            "name": item["name"],
+            "price": item["price"],
+            "description": item["description"],
+            "producer": item["producer"],
+        })
 
-    context = {
-        "q": q,
-        "latest_products": latest_products,
-    }
-    return render(request, "customers/dashboard.html", context)
+    return render(request, "customers/saved_products.html", {
+        "saved_items": items,
+    })
+
+
+def save_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    saved = request.session.setdefault("saved_products", {})
+
+    product_id = str(product.id)
+
+    if product_id not in saved:
+        saved[product_id] = {
+            "name": product.name,
+            "price": float(product.price),
+            "description": product.description,
+            "producer": str(product.producer) if product.producer else "",
+        }
+
+    request.session.modified = True
+    return redirect("customer_dashboard")
+
+
+def remove_saved_product(request, product_id):
+    saved = request.session.get("saved_products", {})
+    product_id = str(product_id)
+
+    if product_id in saved:
+        del saved[product_id]
+        request.session.modified = True
+
+    return redirect("saved_products")
