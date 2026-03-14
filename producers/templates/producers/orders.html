@@ -1,0 +1,28 @@
+{% extends "base/base.html" %}
+
+{% block title %}Producer Orders{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Orders for {{ producer.display_name }}</h1>
+
+    {% if order_items %}
+        <div class="list-group">
+            {% for item in order_items %}
+                <div class="list-group-item">
+                    <div class="d-flex justify-content-between">
+                        <strong>Order #{{ item.order.id }}</strong>
+                        <span>{{ item.order.created_at }}</span>
+                    </div>
+                    <div>Customer: {{ item.order.customer.username }}</div>
+                    <div>Product: {{ item.product.name }}</div>
+                    <div>Quantity: {{ item.quantity }}</div>
+                    <div>Status: {{ item.order.status }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No orders yet for your products.</p>
+    {% endif %}
+</div>
+{% endblock %}

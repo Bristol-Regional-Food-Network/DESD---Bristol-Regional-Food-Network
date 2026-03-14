@@ -1,0 +1,29 @@
+{% extends "base/base.html" %}
+{% block title %}{{ producer.display_name }}{% endblock %}
+
+{% block content %}
+<h1 class="mb-2">{{ producer.display_name }}</h1>
+{% if producer.location %}<p class="text-muted">{{ producer.location }}</p>{% endif %}
+{% if producer.bio %}<p>{{ producer.bio }}</p>{% endif %}
+
+<hr class="my-4">
+
+<h3>Products</h3>
+{% if products %}
+  <div class="row g-3">
+    {% for product in products %}
+      <div class="col-md-4">
+        <div class="card h-100">
+          <div class="card-body">
+            <h5 class="card-title">{{ product.name }}</h5>
+            {% if product.description %}<p class="card-text">{{ product.description|truncatechars:120 }}</p>{% endif %}
+            {% if product.price %}<p class="fw-bold mb-0">{{ product.price }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="text-muted">This producer has no products yet.</p>
+{% endif %}
+{% endblock %}

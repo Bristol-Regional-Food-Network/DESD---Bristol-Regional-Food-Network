@@ -1,0 +1,31 @@
+{% extends "base/base.html" %}
+
+{% block title %}Payment Successful | BRFN{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="card shadow-sm mx-auto" style="max-width: 720px;">
+        <div class="card-body text-center py-5">
+            <div class="mb-4">
+                <div class="mx-auto d-flex align-items-center justify-content-center rounded-circle bg-success text-white" style="width: 80px; height: 80px; font-size: 2rem;">
+                    ✓
+                </div>
+            </div>
+
+            <h1 class="h3 mb-3">Payment Successfully Done</h1>
+
+            <p class="text-muted mb-2">
+                Your payment of <strong>£{{ basket_total|floatformat:2 }}</strong> has been received successfully.
+            </p>
+
+            <p class="text-muted mb-4">
+                Your order confirmation will be sent to your email address.
+            </p>
+
+            <a href="{% url 'customer_dashboard' %}" class="btn btn-dark">
+                Return to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
