@@ -3,24 +3,40 @@
 {% block title %}Producer Dashboard{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container py-4">
   <h1 class="mb-3">Producer Dashboard</h1>
 
   {% if producer %}
     <p class="text-muted">Welcome, {{ producer }}</p>
   {% endif %}
 
-  <a class="btn btn-success" href="{% url 'products:add' %}">Add product</a>
-  <h4 class="mt-4">My Products</h4>
+  <a class="btn btn-success mb-4" href="{% url 'products:add' %}">Add product</a>
+
+  <h4 class="mt-2">My Products</h4>
+
   {% if my_products %}
-    <ul class="list-group">
+    <div class="row g-3 mt-1">
       {% for p in my_products %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-          {{ p.name }}
-          <span class="badge bg-secondary">{{ p.price }}</span>
-        </li>
+        <div class="col-md-6 col-lg-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title mb-0">{{ p.name }}</h5>
+                <span class="badge bg-secondary">£{{ p.price }}</span>
+              </div>
+
+              <p class="text-muted small mb-3">
+                {{ p.description|default:"No description provided."|truncatechars:100 }}
+              </p>
+
+              <div class="mt-auto">
+                <small class="text-muted">Stock: {{ p.stock }}</small>
+              </div>
+            </div>
+          </div>
+        </div>
       {% endfor %}
-    </ul>
+    </div>
   {% else %}
     <p class="text-muted">No products yet.</p>
   {% endif %}
