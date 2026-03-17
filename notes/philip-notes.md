@@ -148,6 +148,7 @@ The homepage:
 I created two accounts to show these features
 - test_producer (PASSWORD: test)
 - test_customer (PASSWORD: test)
+
 These accounts each have different roles and can be used to test/demo how the role-based access works
 
 
@@ -159,6 +160,7 @@ Built on the existing registration system by adding additional fields to the Use
 - Address
 - Postcode
 - Farm Name
+
 Updated the form and view in users/forms.py and users/views.py to correctly save this data to the profile after registration.
 Initially this data was not saving correctly, this was resolved by ensuring the existing UserProfile was updated using get_or_create instead of creating duplicates.
 
@@ -167,6 +169,7 @@ Added conditional validation to the registration form so that required fields de
 - Customers and Producers must enter address and postcode
 - Producers must also enter a farm name
 - AI Engineers and Managers do not require these fields
+
 This ensures cleaner data and prevents unnecessary inputs.
 
 ### Dynamic Registration Form
@@ -174,6 +177,7 @@ To improve usability, I implemented JavaScript to dynamically update the registr
 - Address and postcode fields are shown for Customers and Producers
 - Farm name is only shown for Producers
 - AI Engineers and Managers do not see additional fields
+
 This prevents users from entering irrelevant data and improves the overall user experience.
 
 ## UserProfile & Signals Fixes
@@ -196,6 +200,7 @@ Added helper methods to simplify role checks across the project:
 - can_access_customer
 - can_access_producer
 - is_manager
+
 These are used in templates and views instead of repeatedly checking raw role values.
 
 ## Homepage Updates
@@ -205,6 +210,7 @@ Updated the homepage (home.html) to better reflect role-based functionality:
   - Customer Dashboard button
   - Producer Dashboard button
   - Manager Dashboard button
+
 Managers can now access both Customer and Producer functionality from the homepage.
 
 ### UI Improvements
@@ -212,6 +218,7 @@ Improved consistency of buttons across roles:
 - Customer actions use btn-primary (blue)
 - Producer actions use btn-warning (yellow)
 - Manager actions use btn-success (green)
+
 This makes it clearer which actions belong to which role.
 
 ## Manager Functionality Setup
@@ -219,4 +226,5 @@ Began implementing manager-specific functionality:
 - Added a placeholder "Manager Dashboard" route and template
 - Ensured it integrates with the existing role system
 - Prepared to move this into a dedicated managers app to match the structure of producers and customers
+
 This allows further development without blocking other team members.
