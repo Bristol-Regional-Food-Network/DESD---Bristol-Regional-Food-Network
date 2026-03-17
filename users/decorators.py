@@ -7,8 +7,13 @@ def role_required(required_role):
         @login_required
         # Wrapper function that checks the user's role and redirects to login
         def wrapper(request, *args, **kwargs):
-            if request.user.userprofile.role != required_role:
+            user_role = request.user.userprofile.role
+            if user_role == 'manager':
+                return view_func(request, *args, **kwargs)
+            
+            if user_role != required_role:
                 return redirect('login')
+            
             # If the user has the required role, call the original view function
             return view_func(request, *args, **kwargs)
         return wrapper
