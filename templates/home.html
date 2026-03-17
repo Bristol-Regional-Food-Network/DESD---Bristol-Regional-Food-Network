@@ -1,0 +1,35 @@
+<!-- Simple template for the home page that welcomes the user and displays their username and their role -->
+<h1>Welcome</h1>
+
+{% if user.is_authenticated %}
+    <p>You are logged in as <strong>{{ user.username }}</strong>.</p>
+    {% if profile %}
+        <p>Your role: <strong>{{ profile.role }}</strong></p>
+
+        <!-- Display different buttons based on the user's role to navigate to the appropriate test pages -->
+        {% if profile.role == 'producer' %}
+            <a href="{% url 'producer-test' %}">
+                <button>Go to Producer Test Page</button>
+            </a>
+        {% elif profile.role == 'customer' %}
+            <a href="{% url 'customer-test' %}">
+                <button>Go to Customer Test Page</button>
+            </a>
+        {% endif %}
+    {% else %}
+        <p>No role assigned to your account yet.</p>
+    {% endif %}
+
+    <!-- Logout button that allows the user to log out of their account -->
+    <form action="{% url 'logout' %}" method="post">
+        {% csrf_token %}
+        <button type="submit">Logout</button>
+    </form>
+
+
+<!-- If the user is not authenticated, display a message and provide links to login and register -->
+{% else %}
+    <p>You are not logged in.</p>
+    <a href="{% url 'login' %}"><button>Login</button></a>
+    <a href="{% url 'register' %}"><button>Register</button></a>
+{% endif %}

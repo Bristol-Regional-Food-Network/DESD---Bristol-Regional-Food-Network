@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from products.models import Product
+from .models import Order
 
 
 def _get_basket(session):
@@ -98,6 +99,22 @@ def checkout(request):
             "subtotal": subtotal,
         })
     if request.method == "POST":
+        # Create an Order record for authenticated users so management can track purchases
+        if request.user.is_authenticated:
+            # build a simple text summary of items
+            lines = []
+            for it in items:
+                lines.append(f"{it['quantity']} x {it['name']} @ {it['price']}")
+
+            notes = "\n".join(lines)
+
+            Order.objects.create(
+                customer=request.user,
+                total_amount=total,
+                status="paid",
+                notes=notes,
+            )
+
         request.session["basket"] = {}
         request.session.modified = True
 

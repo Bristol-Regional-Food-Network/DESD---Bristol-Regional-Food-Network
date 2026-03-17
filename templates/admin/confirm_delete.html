@@ -1,0 +1,12 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  {% include 'admin/management_nav.html' %}
+  <h1>Confirm delete</h1>
+  <p>Are you sure you want to delete {{ object }}?</p>
+  <form method="post">
+    {% csrf_token %}
+    <button type="submit">Yes, delete</button>
+    <a href="javascript:history.back()">Cancel</a>
+  </form>
+{% endblock %}

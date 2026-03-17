@@ -1,0 +1,18 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  {% include 'admin/management_nav.html' %}
+  <h1>Order #{{ order.id }}</h1>
+  <ul>
+    <li>Customer: {{ order.customer.username }}</li>
+    <li>Amount: {{ order.total_amount }}</li>
+    <li>Status: {{ order.get_status_display }}</li>
+    <li>Created: {{ order.created_at }}</li>
+    <li>Notes: {{ order.notes }}</li>
+  </ul>
+  <p>
+    <a href="{% url 'admin_order_edit' order.pk %}">Edit</a> |
+    <a href="{% url 'admin_order_delete' order.pk %}">Delete</a> |
+    <a href="{% url 'admin_orders' %}">Back to orders</a>
+  </p>
+{% endblock %}
