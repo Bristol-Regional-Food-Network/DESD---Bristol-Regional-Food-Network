@@ -1,6 +1,8 @@
+from decimal import Decimal
 from django.shortcuts import get_object_or_404, redirect, render
 from products.models import Product
 from .forms import PaymentForm
+from .models import Order, OrderItem
 
 
 def _get_basket(session):
@@ -65,16 +67,19 @@ def basket_detail(request):
     basket = _get_basket(request.session)
 
     items = []
-    total = 0
+    total = Decimal("0.00")
 
     for product_id, item in basket.items():
-        subtotal = item["price"] * item["quantity"]
+        price = Decimal(str(item["price"]))
+        quantity = int(item["quantity"])
+        subtotal = price * quantity
         total += subtotal
+
         items.append({
             "product_id": product_id,
             "name": item["name"],
-            "price": item["price"],
-            "quantity": item["quantity"],
+            "price": price,
+            "quantity": quantity,
             "subtotal": subtotal,
         })
 
@@ -86,28 +91,62 @@ def basket_detail(request):
 
 def checkout(request):
     basket = request.session.get("basket", {})
-
     items = []
-    total = 0
+    total = Decimal("0.00")
 
     for product_id, item in basket.items():
-        subtotal = item["price"] * item["quantity"]
+        price = Decimal(str(item["price"]))
+        quantity = int(item["quantity"])
+        subtotal = price * quantity
         total += subtotal
+
         items.append({
+            "product_id": product_id,
             "name": item["name"],
-            "price": item["price"],
-            "quantity": item["quantity"],
+            "price": price,
+            "quantity": quantity,
             "subtotal": subtotal,
         })
+
+    if not basket:
+        return redirect("basket:basket_detail")
 
     if request.method == "POST":
         form = PaymentForm(request.POST)
         if form.is_valid():
+            cleaned = form.cleaned_data
+            card_number = cleaned["card_number"]
+            card_last4 = card_number[-4:]
+
+            order = Order.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                cardholder_name=cleaned["cardholder_name"],
+                card_last4=card_last4,
+                billing_address=cleaned["billing_address"],
+                city=cleaned["city"],
+                postcode=cleaned["postcode"],
+                country=cleaned["country"],
+                total_amount=total,
+                status="paid",
+            )
+
+            for item in items:
+                product = Product.objects.filter(id=item["product_id"]).first()
+
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    product_name=item["name"],
+                    price=item["price"],
+                    quantity=item["quantity"],
+                )
+
             request.session["basket"] = {}
             request.session.modified = True
 
             return render(request, "basket/payment_success.html", {
                 "basket_total": total,
+                "order": order,
             })
     else:
         form = PaymentForm()

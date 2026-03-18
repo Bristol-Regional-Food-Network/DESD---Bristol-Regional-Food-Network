@@ -11,11 +11,10 @@ def dashboard(request):
     if query:
         products = products.filter(
             Q(name__icontains=query) |
-            Q(description__icontains=query) |
-            Q(producer__farm_name__icontains=query)
+            Q(description__icontains=query)
         ).distinct()
-    else:
-        products = products[:4]
+
+    products = products[:4]
 
     return render(request, "customers/dashboard.html", {
         "products": products,
@@ -56,7 +55,7 @@ def save_product(request, product_id):
         }
 
     request.session.modified = True
-    return redirect("customer_dashboard")
+    return redirect("customers:dashboard")
 
 
 def remove_saved_product(request, product_id):
@@ -67,4 +66,4 @@ def remove_saved_product(request, product_id):
         del saved[product_id]
         request.session.modified = True
 
-    return redirect("saved_products")
+    return redirect("customers:saved_products")
