@@ -42,33 +42,61 @@
                 <div class="card-body">
                     <h2 class="h5 mb-3">Payment Details</h2>
 
-                    <form method="post" id="paymentForm">
+                    <form method="post" id="paymentForm" novalidate>
                         {% csrf_token %}
 
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
                         <div class="mb-3">
-                            <label for="cardholder_name" class="form-label">Cardholder Name</label>
-                            <input type="text" class="form-control" id="cardholder_name" name="cardholder_name" placeholder="Full name on card" required>
+                            <label for="{{ form.cardholder_name.id_for_label }}" class="form-label">Cardholder Name</label>
+                            {{ form.cardholder_name }}
+                            <div class="invalid-feedback d-block" id="cardholder_name_error"></div>
+                            {% if form.cardholder_name.errors %}
+                                <div class="text-danger small mt-1">{{ form.cardholder_name.errors }}</div>
+                            {% endif %}
                         </div>
 
                         <div class="mb-3">
-                            <label for="card_number" class="form-label">Card Number</label>
-                            <input type="text" class="form-control" id="card_number" name="card_number" placeholder="1234 5678 9012 3456" maxlength="19" required>
+                            <label for="{{ form.card_number.id_for_label }}" class="form-label">Card Number</label>
+                            {{ form.card_number }}
+                            <div class="invalid-feedback d-block" id="card_number_error"></div>
+                            {% if form.card_number.errors %}
+                                <div class="text-danger small mt-1">{{ form.card_number.errors }}</div>
+                            {% endif %}
                         </div>
 
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label for="expiry_month" class="form-label">Expiry Month</label>
-                                <input type="text" class="form-control" id="expiry_month" name="expiry_month" placeholder="MM" maxlength="2" required>
+                                <label for="{{ form.expiry_month.id_for_label }}" class="form-label">Expiry Month</label>
+                                {{ form.expiry_month }}
+                                <div class="invalid-feedback d-block" id="expiry_month_error"></div>
+                                {% if form.expiry_month.errors %}
+                                    <div class="text-danger small mt-1">{{ form.expiry_month.errors }}</div>
+                                {% endif %}
                             </div>
 
                             <div class="col-md-4">
-                                <label for="expiry_year" class="form-label">Expiry Year</label>
-                                <input type="text" class="form-control" id="expiry_year" name="expiry_year" placeholder="YY" maxlength="2" required>
+                                <label for="{{ form.expiry_year.id_for_label }}" class="form-label">Expiry Year</label>
+                                {{ form.expiry_year }}
+                                <div class="invalid-feedback d-block" id="expiry_year_error"></div>
+                                {% if form.expiry_year.errors %}
+                                    <div class="text-danger small mt-1">{{ form.expiry_year.errors }}</div>
+                                {% endif %}
                             </div>
 
                             <div class="col-md-4">
-                                <label for="cvv" class="form-label">CVV</label>
-                                <input type="password" class="form-control" id="cvv" name="cvv" placeholder="123" maxlength="4" required>
+                                <label for="{{ form.cvv.id_for_label }}" class="form-label">CVV</label>
+                                {{ form.cvv }}
+                                <div class="invalid-feedback d-block" id="cvv_error"></div>
+                                {% if form.cvv.errors %}
+                                    <div class="text-danger small mt-1">{{ form.cvv.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -77,24 +105,36 @@
                         <h3 class="h6 mb-3">Billing Information</h3>
 
                         <div class="mb-3">
-                            <label for="billing_address" class="form-label">Billing Address</label>
-                            <input type="text" class="form-control" id="billing_address" name="billing_address" placeholder="Street address" required>
+                            <label for="{{ form.billing_address.id_for_label }}" class="form-label">Billing Address</label>
+                            {{ form.billing_address }}
+                            {% if form.billing_address.errors %}
+                                <div class="text-danger small mt-1">{{ form.billing_address.errors }}</div>
+                            {% endif %}
                         </div>
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="city" class="form-label">City</label>
-                                <input type="text" class="form-control" id="city" name="city" required>
+                                <label for="{{ form.city.id_for_label }}" class="form-label">City</label>
+                                {{ form.city }}
+                                {% if form.city.errors %}
+                                    <div class="text-danger small mt-1">{{ form.city.errors }}</div>
+                                {% endif %}
                             </div>
 
                             <div class="col-md-3">
-                                <label for="postcode" class="form-label">Postcode</label>
-                                <input type="text" class="form-control" id="postcode" name="postcode" required>
+                                <label for="{{ form.postcode.id_for_label }}" class="form-label">Postcode</label>
+                                {{ form.postcode }}
+                                {% if form.postcode.errors %}
+                                    <div class="text-danger small mt-1">{{ form.postcode.errors }}</div>
+                                {% endif %}
                             </div>
 
                             <div class="col-md-3">
-                                <label for="country" class="form-label">Country</label>
-                                <input type="text" class="form-control" id="country" name="country" value="UK" required>
+                                <label for="{{ form.country.id_for_label }}" class="form-label">Country</label>
+                                {{ form.country }}
+                                {% if form.country.errors %}
+                                    <div class="text-danger small mt-1">{{ form.country.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
 
@@ -125,19 +165,220 @@
 </div>
 
 <script>
-document.getElementById("paymentForm").addEventListener("submit", function(e) {
-    const overlay = document.getElementById("paymentLoadingOverlay");
+document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("paymentForm");
     const payButton = document.getElementById("payButton");
+    const overlay = document.getElementById("paymentLoadingOverlay");
 
-    overlay.classList.remove("d-none");
-    payButton.disabled = true;
-    payButton.innerText = "Processing...";
+    const monthField = document.getElementById("id_expiry_month");
+    const yearField = document.getElementById("id_expiry_year");
+    const cvvField = document.getElementById("id_cvv");
+    const cardNumberField = document.getElementById("id_card_number");
+    const cardholderField = document.getElementById("id_cardholder_name");
 
-    e.preventDefault();
+    function setInvalid(field, message) {
+        field.classList.add("is-invalid");
+        field.classList.remove("is-valid");
+        const errorBox = document.getElementById(field.name + "_error");
+        if (errorBox) errorBox.textContent = message;
+    }
 
-    setTimeout(() => {
-        this.submit();
-    }, 2000);
+    function setValid(field) {
+        field.classList.remove("is-invalid");
+        field.classList.add("is-valid");
+        const errorBox = document.getElementById(field.name + "_error");
+        if (errorBox) errorBox.textContent = "";
+    }
+
+    function clearState(field) {
+        field.classList.remove("is-invalid");
+        field.classList.remove("is-valid");
+        const errorBox = document.getElementById(field.name + "_error");
+        if (errorBox) errorBox.textContent = "";
+    }
+
+    function validateMonth(showEmptyError = false) {
+        const value = monthField.value.trim();
+
+        if (value === "") {
+            if (showEmptyError) {
+                setInvalid(monthField, "Expiry month is required.");
+            } else {
+                clearState(monthField);
+            }
+            return false;
+        }
+
+        const month = parseInt(value, 10);
+
+        if (isNaN(month) || month < 1 || month > 12) {
+            setInvalid(monthField, "Enter a valid month between 1 and 12.");
+            return false;
+        }
+
+        setValid(monthField);
+        return true;
+    }
+
+    function validateYear(showEmptyError = false) {
+        const value = yearField.value.trim();
+
+        if (value === "") {
+            if (showEmptyError) {
+                setInvalid(yearField, "Expiry year is required.");
+            } else {
+                clearState(yearField);
+            }
+            return false;
+        }
+
+        if (!/^\d{2}$/.test(value)) {
+            setInvalid(yearField, "Enter a valid 2-digit year.");
+            return false;
+        }
+
+        const inputYear = parseInt(value, 10);
+        const now = new Date();
+        const currentYear = now.getFullYear() % 100;
+        const currentMonth = now.getMonth() + 1;
+
+        if (inputYear < currentYear) {
+            setInvalid(yearField, "Card has expired.");
+            return false;
+        }
+
+        if (monthField.value.trim() !== "") {
+            const inputMonth = parseInt(monthField.value.trim(), 10);
+            if (!isNaN(inputMonth) && inputYear === currentYear && inputMonth < currentMonth) {
+                setInvalid(yearField, "Card has expired.");
+                return false;
+            }
+        }
+
+        setValid(yearField);
+        return true;
+    }
+
+    function validateCVV(showEmptyError = false) {
+        const value = cvvField.value.trim();
+
+        if (value === "") {
+            if (showEmptyError) {
+                setInvalid(cvvField, "CVV is required.");
+            } else {
+                clearState(cvvField);
+            }
+            return false;
+        }
+
+        if (!/^\d{3,4}$/.test(value)) {
+            setInvalid(cvvField, "CVV must be 3 or 4 digits.");
+            return false;
+        }
+
+        setValid(cvvField);
+        return true;
+    }
+
+    function validateCardNumber(showEmptyError = false) {
+        const value = cardNumberField.value.replace(/\s/g, "");
+
+        if (value === "") {
+            if (showEmptyError) {
+                setInvalid(cardNumberField, "Card number is required.");
+            } else {
+                clearState(cardNumberField);
+            }
+            return false;
+        }
+
+        if (!/^\d{16}$/.test(value)) {
+            setInvalid(cardNumberField, "Card number must be 16 digits.");
+            return false;
+        }
+
+        setValid(cardNumberField);
+        return true;
+    }
+
+    function validateCardholder(showEmptyError = false) {
+        const value = cardholderField.value.trim();
+
+        if (value === "") {
+            if (showEmptyError) {
+                setInvalid(cardholderField, "Cardholder name is required.");
+            } else {
+                clearState(cardholderField);
+            }
+            return false;
+        }
+
+        if (value.length < 2) {
+            setInvalid(cardholderField, "Enter the cardholder name.");
+            return false;
+        }
+
+        setValid(cardholderField);
+        return true;
+    }
+
+    monthField.addEventListener("input", function () {
+        validateMonth(false);
+        if (yearField.value.trim() !== "") validateYear(false);
+    });
+    monthField.addEventListener("blur", function () {
+        validateMonth(true);
+    });
+
+    yearField.addEventListener("input", function () {
+        validateYear(false);
+    });
+    yearField.addEventListener("blur", function () {
+        validateYear(true);
+    });
+
+    cvvField.addEventListener("input", function () {
+        validateCVV(false);
+    });
+    cvvField.addEventListener("blur", function () {
+        validateCVV(true);
+    });
+
+    cardNumberField.addEventListener("input", function () {
+        validateCardNumber(false);
+    });
+    cardNumberField.addEventListener("blur", function () {
+        validateCardNumber(true);
+    });
+
+    cardholderField.addEventListener("input", function () {
+        validateCardholder(false);
+    });
+    cardholderField.addEventListener("blur", function () {
+        validateCardholder(true);
+    });
+
+    form.addEventListener("submit", function (e) {
+        const monthOk = validateMonth(true);
+        const yearOk = validateYear(true);
+        const cvvOk = validateCVV(true);
+        const cardOk = validateCardNumber(true);
+        const nameOk = validateCardholder(true);
+
+        if (!(monthOk && yearOk && cvvOk && cardOk && nameOk)) {
+            e.preventDefault();
+            return;
+        }
+
+        overlay.classList.remove("d-none");
+        payButton.disabled = true;
+        payButton.innerText = "Processing...";
+
+        e.preventDefault();
+        setTimeout(() => {
+            form.submit();
+        }, 1200);
+    });
 });
 </script>
 {% endblock %}

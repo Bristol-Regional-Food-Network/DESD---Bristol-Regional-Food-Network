@@ -16,11 +16,12 @@
             </form>
         </div>
 
-        <form method="get" action="{% url 'products:product_list' %}" class="row g-2">
+        <form method="GET" action="{% url 'customer_dashboard' %}" class="row g-2">
             <div class="col-md-9">
                 <input
                     type="text"
                     name="q"
+                    value="{{ query }}"
                     class="form-control"
                     placeholder="Search by product name, description, or producer..."
                 >
@@ -66,7 +67,13 @@
     </div>
 
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h3 mb-0">Latest products</h2>
+        <h2 class="h3 mb-0">
+            {% if query %}
+                Search results
+            {% else %}
+                Latest products
+            {% endif %}
+        </h2>
         <a href="{% url 'products:product_list' %}" class="btn btn-outline-dark btn-sm">View all</a>
     </div>
 
@@ -102,7 +109,13 @@
             </div>
         {% empty %}
             <div class="col-12">
-                <div class="alert alert-info">No products available right now.</div>
+                <div class="alert alert-info">
+                    {% if query %}
+                        No products found for "{{ query }}".
+                    {% else %}
+                        No products available right now.
+                    {% endif %}
+                </div>
             </div>
         {% endfor %}
     </div>

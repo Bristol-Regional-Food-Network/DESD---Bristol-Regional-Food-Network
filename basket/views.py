@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from products.models import Product
+from .forms import PaymentForm
 
 
 def _get_basket(session):
@@ -81,6 +82,8 @@ def basket_detail(request):
         "basket_items": items,
         "basket_total": total,
     })
+
+
 def checkout(request):
     basket = request.session.get("basket", {})
 
@@ -90,22 +93,27 @@ def checkout(request):
     for product_id, item in basket.items():
         subtotal = item["price"] * item["quantity"]
         total += subtotal
-
         items.append({
             "name": item["name"],
             "price": item["price"],
             "quantity": item["quantity"],
             "subtotal": subtotal,
         })
-    if request.method == "POST":
-        request.session["basket"] = {}
-        request.session.modified = True
 
-        return render(request, "basket/payment_success.html", {
-            "basket_total": total,
-        })
+    if request.method == "POST":
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            request.session["basket"] = {}
+            request.session.modified = True
+
+            return render(request, "basket/payment_success.html", {
+                "basket_total": total,
+            })
+    else:
+        form = PaymentForm()
 
     return render(request, "basket/checkout.html", {
         "basket_items": items,
         "basket_total": total,
+        "form": form,
     })

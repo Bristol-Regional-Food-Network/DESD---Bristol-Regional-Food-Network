@@ -1,11 +1,25 @@
 from django.shortcuts import get_object_or_404, redirect, render
+from django.db.models import Q
 from products.models import Product
 
 
 def dashboard(request):
-    products = Product.objects.select_related("producer").all()[:4]
+    query = request.GET.get("q", "").strip()
+
+    products = Product.objects.select_related("producer").all()
+
+    if query:
+        products = products.filter(
+            Q(name__icontains=query) |
+            Q(description__icontains=query) |
+            Q(producer__farm_name__icontains=query)
+        ).distinct()
+    else:
+        products = products[:4]
+
     return render(request, "customers/dashboard.html", {
         "products": products,
+        "query": query,
     })
 
 
