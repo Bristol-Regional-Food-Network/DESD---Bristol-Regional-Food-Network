@@ -4,41 +4,156 @@
 
 {% block content %}
 <div class="container py-4">
-  <h1 class="mb-3">Producer Dashboard</h1>
-
   {% if producer %}
-    <p class="text-muted">Welcome, {{ producer }}</p>
+    <h1 class="mb-2">{{ producer.display_name }}</h1>
+    <p class="text-muted">Manage your products by section.</p>
+  {% else %}
+    <h1 class="mb-3">Producer Dashboard</h1>
   {% endif %}
 
   <a class="btn btn-success mb-4" href="{% url 'products:add' %}">Add product</a>
 
-  <h4 class="mt-2">My Products</h4>
+  {% if not my_products %}
+    <p class="text-muted">No products yet.</p>
+  {% endif %}
 
-  {% if my_products %}
-    <div class="row g-3 mt-1">
-      {% for p in my_products %}
-        <div class="col-md-6 col-lg-4">
-          <div class="card shadow-sm h-100">
-            <div class="card-body d-flex flex-column">
-              <div class="d-flex justify-content-between align-items-start mb-2">
-                <h5 class="card-title mb-0">{{ p.name }}</h5>
-                <span class="badge bg-secondary">£{{ p.price }}</span>
-              </div>
+  <!-- Seasonal Items -->
+  <div class="mb-5">
+    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#4CAF50;">
+      <strong>Seasonal Items</strong>
+    </div>
 
-              <p class="text-muted small mb-3">
-                {{ p.description|default:"No description provided."|truncatechars:100 }}
-              </p>
+    {% if seasonal_products %}
+      <div class="row g-3">
+        {% for p in seasonal_products %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h5 class="card-title mb-0">{{ p.name }}</h5>
+                  <span class="badge bg-secondary">£{{ p.price }}</span>
+                </div>
 
-              <div class="mt-auto">
-                <small class="text-muted">Stock: {{ p.stock }}</small>
+                <p class="text-muted small mb-3">
+                  {{ p.description|default:"No description provided."|truncatechars:100 }}
+                </p>
+
+                <div class="mt-auto d-flex justify-content-between align-items-center">
+                  <small class="text-muted">Stock: {{ p.stock }}</small>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'products:delete' p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No seasonal items yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- Discounted Items -->
+  <div class="mb-5">
+    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#FF5252;">
+      <strong>Discounted Items</strong>
     </div>
-  {% else %}
-    <p class="text-muted">No products yet.</p>
-  {% endif %}
+
+    {% if discounted_products %}
+      <div class="row g-3">
+        {% for p in discounted_products %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4 position-relative">
+              {% if p.discount_percent > 0 %}
+                <span class="badge bg-danger position-absolute top-0 start-0 m-2">
+                  {{ p.discount_percent }}% OFF
+                </span>
+              {% endif %}
+
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2 mt-3">
+                  <h5 class="card-title mb-0">{{ p.name }}</h5>
+                  <span class="badge bg-secondary">£{{ p.price }}</span>
+                </div>
+
+                <p class="text-muted small mb-2">
+                  {{ p.description|default:"No description provided."|truncatechars:100 }}
+                </p>
+
+                {% if p.discount_percent > 0 %}
+                  <p class="mb-2">
+                    <span class="text-muted text-decoration-line-through">£{{ p.price }}</span>
+                    <span class="fw-bold text-danger ms-2">£{{ p.discounted_price|floatformat:2 }}</span>
+                  </p>
+                {% endif %}
+
+                <div class="mt-auto d-flex justify-content-between align-items-center">
+                  <small class="text-muted">Stock: {{ p.stock }}</small>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'products:delete' p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No discounted items yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- All Items -->
+  <div class="mb-5">
+    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#2196F3;">
+      <strong>All Items</strong>
+    </div>
+
+    {% if all_products %}
+      <div class="row g-3">
+        {% for p in all_products %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h5 class="card-title mb-0">{{ p.name }}</h5>
+                  <span class="badge bg-secondary">£{{ p.price }}</span>
+                </div>
+
+                <p class="text-muted small mb-3">
+                  {{ p.description|default:"No description provided."|truncatechars:100 }}
+                </p>
+
+                <div class="mt-auto d-flex justify-content-between align-items-center">
+                  <small class="text-muted">Stock: {{ p.stock }}</small>
+                </div>
+
+                <div class="mt-3 d-flex gap-2">
+                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'products:delete' p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No regular items yet.</p>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

@@ -1,85 +1,72 @@
 {% extends "base/base.html" %}
 
-{% block title %}Add Product{% endblock %}
+{% block title %}{{ page_title|default:"Add Product" }}{% endblock %}
 
 {% block content %}
-
 <div class="row justify-content-center">
-    <div class="col-md-6">
+    <div class="col-md-7 col-lg-6">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <h2 class="mb-4 text-center">{{ page_title|default:"Add Product" }}</h2>
 
-        <h2 class="mb-4 text-center">Add Product</h2>
+                <form method="post">
+                    {% csrf_token %}
 
-        <form method="post">
-            {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Product Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="text-danger small mt-1">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
 
-            <!-- Product Name -->
-            <div class="mb-3">
-                <label class="form-label">Product Name</label>
-                <input 
-                    type="text" 
-                    name="name" 
-                    class="form-control"
-                    placeholder="Enter product name"
-                    required
-                >
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small mt-1">{{ form.description.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Price (£)</label>
+                        {{ form.price }}
+                        {% if form.price.errors %}
+                            <div class="text-danger small mt-1">{{ form.price.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        {{ form.stock }}
+                        {% if form.stock.errors %}
+                            <div class="text-danger small mt-1">{{ form.stock.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Section</label>
+                        {{ form.section }}
+                        {% if form.section.errors %}
+                            <div class="text-danger small mt-1">{{ form.section.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Discount Percent</label>
+                        {{ form.discount_percent }}
+                        <div class="form-text">Use 0 for non-discounted items.</div>
+                        {% if form.discount_percent.errors %}
+                            <div class="text-danger small mt-1">{{ form.discount_percent.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        {% if is_edit %}Update Product{% else %}Add Product{% endif %}
+                    </button>
+                </form>
             </div>
-
-            <!-- Description -->
-            <div class="mb-3">
-                <label class="form-label">Description</label>
-                <textarea 
-                    name="description" 
-                    class="form-control"
-                    rows="3"
-                    placeholder="Describe the product"
-                ></textarea>
-            </div>
-
-            <!-- Price -->
-            <div class="mb-3">
-                <label class="form-label">Price (£)</label>
-                <input 
-                    type="number" 
-                    name="price" 
-                    class="form-control"
-                    step="0.01"
-                    min="0"
-                    required
-                >
-            </div>
-
-            <!-- Quantity -->
-            <div class="mb-3">
-                <label class="form-label">Quantity</label>
-                <input 
-                    type="number" 
-                    name="stock"
-                    class="form-control"
-                    min="0"
-                    value="0"
-                    required
-                >
-            </div>
-
-            <!-- Best Before Date -->
-            <div class="mb-3">
-                <label class="form-label">Best Before Date</label>
-                <input 
-                    type="date"
-                    name="best_before"
-                    class="form-control"
-                    required
-                >
-            </div>
-
-            <!-- Submit -->
-            <button type="submit" class="btn btn-success w-100">
-                Add Product
-            </button>
-
-        </form>
-
+        </div>
     </div>
 </div>
-
 {% endblock %}

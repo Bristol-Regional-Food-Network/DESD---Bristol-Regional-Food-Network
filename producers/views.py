@@ -29,24 +29,35 @@ def index(request):
 @login_required
 @role_required("producer")
 def dashboard(request):
-
     producer = getattr(request.user, "producer", None)
 
     if producer is None:
-        return render(request, "producers/dashboard.html", {
-            "producer": None,
-            "my_products": []
-        })
+        return render(
+            request,
+            "producers/dashboard.html",
+            {
+                "producer": None,
+                "my_products": [],
+                "seasonal_products": [],
+                "discounted_products": [],
+                "all_products": [],
+            },
+        )
 
-    # Get products belonging to this producer
-    my_products = Product.objects.filter(producer=producer)
+    my_products = Product.objects.filter(producer=producer).order_by("-id")
+    seasonal_products = my_products.filter(section=Product.SECTION_SEASONAL)
+    discounted_products = my_products.filter(section=Product.SECTION_DISCOUNTED)
+    all_products = my_products.filter(section=Product.SECTION_ALL)
 
     return render(
         request,
         "producers/dashboard.html",
         {
             "producer": producer,
-            "my_products": my_products
+            "my_products": my_products,
+            "seasonal_products": seasonal_products,
+            "discounted_products": discounted_products,
+            "all_products": all_products,
         },
     )
 
