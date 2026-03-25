@@ -7,12 +7,18 @@ def dashboard(request):
     query = request.GET.get("q", "").strip()
 
     products = Product.objects.select_related("producer").all()
+    products = [product for product in products if product.is_visible_to_customers]
 
     if query:
-        products = products.filter(
-            Q(name__icontains=query) |
-            Q(description__icontains=query)
-        ).distinct()
+        products = [
+            product for product in products
+            if (
+                query.lower() in product.name.lower()
+                or query.lower() in (product.description or "").lower()
+                or query.lower() in (product.producer.farm_name or "").lower()
+                or query.lower() in (product.producer.display_name or "").lower()
+            )
+        ]
 
     products = products[:4]
 
@@ -42,8 +48,11 @@ def saved_products(request):
 
 def save_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
-    saved = request.session.setdefault("saved_products", {})
 
+    if not product.is_visible_to_customers:
+        return redirect("products:product_list")
+
+    saved = request.session.setdefault("saved_products", {})
     product_id = str(product.id)
 
     if product_id not in saved:

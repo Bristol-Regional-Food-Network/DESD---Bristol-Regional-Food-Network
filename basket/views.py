@@ -1,4 +1,5 @@
 from decimal import Decimal
+from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from products.models import Product
 from .forms import PaymentForm
@@ -11,6 +12,11 @@ def _get_basket(session):
 
 def basket_add(request, product_id):
     product = get_object_or_404(Product, id=product_id)
+
+    if not product.is_visible_to_customers:
+        messages.error(request, "This product is currently not available to order.")
+        return redirect("products:product_list")
+
     basket = _get_basket(request.session)
 
     product_id = str(product.id)
@@ -19,12 +25,17 @@ def basket_add(request, product_id):
     if quantity < 1:
         quantity = 1
 
+    if quantity > product.stock:
+        quantity = product.stock
+
     if product_id in basket:
         basket[product_id]["quantity"] += quantity
+        if basket[product_id]["quantity"] > product.stock:
+            basket[product_id]["quantity"] = product.stock
     else:
         basket[product_id] = {
             "name": product.name,
-            "price": float(product.price),
+            "price": float(product.active_price),
             "quantity": quantity,
         }
 
@@ -38,9 +49,17 @@ def basket_update(request, product_id):
 
     if product_id in basket:
         action = request.POST.get("action")
+        product = Product.objects.filter(id=product_id).first()
+
+        if not product or not product.is_visible_to_customers:
+            del basket[product_id]
+            request.session.modified = True
+            messages.warning(request, "A product in your basket is no longer available.")
+            return redirect("basket:basket_detail")
 
         if action == "increase":
-            basket[product_id]["quantity"] += 1
+            if basket[product_id]["quantity"] < product.stock:
+                basket[product_id]["quantity"] += 1
         elif action == "decrease":
             basket[product_id]["quantity"] -= 1
 
@@ -68,20 +87,35 @@ def basket_detail(request):
 
     items = []
     total = Decimal("0.00")
+    remove_ids = []
 
     for product_id, item in basket.items():
-        price = Decimal(str(item["price"]))
-        quantity = int(item["quantity"])
+        product = Product.objects.filter(id=product_id).first()
+
+        if not product or not product.is_visible_to_customers:
+            remove_ids.append(product_id)
+            continue
+
+        quantity = min(int(item["quantity"]), product.stock)
+        price = Decimal(str(product.active_price))
         subtotal = price * quantity
         total += subtotal
 
         items.append({
             "product_id": product_id,
-            "name": item["name"],
+            "name": product.name,
             "price": price,
             "quantity": quantity,
             "subtotal": subtotal,
         })
+
+        basket[product_id]["price"] = float(product.active_price)
+
+    for product_id in remove_ids:
+        del basket[product_id]
+
+    if remove_ids:
+        request.session.modified = True
 
     return render(request, "basket/basket_detail.html", {
         "basket_items": items,
@@ -94,21 +128,27 @@ def checkout(request):
     items = []
     total = Decimal("0.00")
 
-    for product_id, item in basket.items():
-        price = Decimal(str(item["price"]))
-        quantity = int(item["quantity"])
+    for product_id, item in list(basket.items()):
+        product = Product.objects.filter(id=product_id).first()
+
+        if not product or not product.is_visible_to_customers:
+            continue
+
+        quantity = min(int(item["quantity"]), product.stock)
+        price = Decimal(str(product.active_price))
         subtotal = price * quantity
         total += subtotal
 
         items.append({
             "product_id": product_id,
-            "name": item["name"],
+            "name": product.name,
             "price": price,
             "quantity": quantity,
             "subtotal": subtotal,
         })
 
-    if not basket:
+    if not basket or not items:
+        messages.warning(request, "There are no available products in your basket.")
         return redirect("basket:basket_detail")
 
     if request.method == "POST":
@@ -140,6 +180,15 @@ def checkout(request):
                     price=item["price"],
                     quantity=item["quantity"],
                 )
+
+                if product:
+                    product.stock = max(product.stock - item["quantity"], 0)
+                    if product.stock == 0:
+                        product.is_surplus = False
+                        product.surplus_discount_percent = 0
+                        product.surplus_note = ""
+                        product.surplus_expires_at = None
+                    product.save()
 
             request.session["basket"] = {}
             request.session.modified = True

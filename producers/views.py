@@ -5,7 +5,8 @@ from django.views.decorators.http import require_http_methods
 
 from users.decorators import role_required
 from .models import Producer
-from products.models import Product   # <-- ADD THIS
+from products.models import Product
+
 
 def _producer_to_dict(producer: Producer):
     return {
@@ -18,9 +19,6 @@ def _producer_to_dict(producer: Producer):
         "product_count": producer.products.count(),
     }
 
-
-def index(request):
-    return render(request, "producers/index.html")
 
 def index(request):
     return render(request, "producers/index.html")
@@ -40,14 +38,18 @@ def dashboard(request):
                 "my_products": [],
                 "seasonal_products": [],
                 "discounted_products": [],
+                "surplus_products": [],
                 "all_products": [],
+                "upcoming_season_products": [],
             },
         )
 
     my_products = Product.objects.filter(producer=producer).order_by("-id")
     seasonal_products = my_products.filter(section=Product.SECTION_SEASONAL)
     discounted_products = my_products.filter(section=Product.SECTION_DISCOUNTED)
+    surplus_products = my_products.filter(section=Product.SECTION_SURPLUS)
     all_products = my_products.filter(section=Product.SECTION_ALL)
+    upcoming_season_products = [p for p in my_products if p.season_starts_next_month]
 
     return render(
         request,
@@ -57,7 +59,9 @@ def dashboard(request):
             "my_products": my_products,
             "seasonal_products": seasonal_products,
             "discounted_products": discounted_products,
+            "surplus_products": surplus_products,
             "all_products": all_products,
+            "upcoming_season_products": upcoming_season_products,
         },
     )
 
@@ -70,6 +74,7 @@ def list_producers(request):
 def producer_detail(request, producer_id):
     producer = get_object_or_404(Producer, id=producer_id)
     return render(request, "producers/detail.html", {"producer": producer})
+
 
 @require_http_methods(["GET"])
 def api_producer_collection(request: HttpRequest):
@@ -90,6 +95,16 @@ def api_producer_resource(request: HttpRequest, producer_id: int):
             "name": product.name,
             "price": str(product.price),
             "stock": product.stock,
+            "availability_mode": product.availability_mode,
+            "season_range_display": product.season_range_display,
+            "customer_status": product.customer_status,
+            "is_visible_to_customers": product.is_visible_to_customers,
+            "is_surplus": product.is_surplus,
+            "surplus_discount_percent": product.surplus_discount_percent,
+            "surplus_note": product.surplus_note,
+            "surplus_expires_at": product.surplus_expires_at.isoformat() if product.surplus_expires_at else None,
+            "is_surplus_active": product.is_surplus_active,
+            "active_price": str(product.active_price),
         }
         for product in producer.products.all().order_by("-id")
     ]
