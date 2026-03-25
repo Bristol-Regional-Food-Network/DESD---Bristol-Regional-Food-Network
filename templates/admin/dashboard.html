@@ -10,8 +10,11 @@
   </ul>
 
   <h2>Recent orders</h2>
-  <table>
-    <tr><th>#</th><th>Customer</th><th>Amount</th><th>Status</th><th>When</th></tr>
+  <table class="admin-table">
+    <thead>
+      <tr><th>#</th><th>Customer</th><th>Amount</th><th>Status</th><th>When</th></tr>
+    </thead>
+    <tbody>
     {% for o in recent_orders %}
       <tr>
         <td><a href="{% url 'admin_order_detail' o.pk %}">{{ o.id }}</a></td>
@@ -23,12 +26,8 @@
     {% empty %}
       <tr><td colspan="5">No orders yet</td></tr>
     {% endfor %}
+    </tbody>
   </table>
 
-  <p>
-    <a href="{% url 'admin_customers' %}">Customers</a> |
-    <a href="{% url 'admin_producers' %}">Producers</a> |
-    <a href="{% url 'admin_orders' %}">Orders</a>
-  </p>
 
 {% endblock %}

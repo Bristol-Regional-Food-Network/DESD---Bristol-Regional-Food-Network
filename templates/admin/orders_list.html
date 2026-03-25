@@ -3,9 +3,12 @@
 {% block content %}
   {% include 'admin/management_nav.html' %}
   <h1>Orders</h1>
-  <p><a href="{% url 'admin_order_create' %}">Create new order</a></p>
-  <table>
-    <tr><th>#</th><th>Customer</th><th>Amount</th><th>Status</th><th>When</th><th>Actions</th></tr>
+  <div class="admin-actions" aria-hidden="true"></div>
+  <table class="admin-table">
+    <thead>
+      <tr><th>#</th><th>Customer</th><th>Amount</th><th>Status</th><th>When</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
     {% for o in orders %}
       <tr>
         <td><a href="{% url 'admin_order_detail' o.pk %}">{{ o.id }}</a></td>
@@ -21,5 +24,6 @@
     {% empty %}
       <tr><td colspan="6">No orders.</td></tr>
     {% endfor %}
+    </tbody>
   </table>
 {% endblock %}

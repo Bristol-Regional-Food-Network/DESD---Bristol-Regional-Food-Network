@@ -3,8 +3,11 @@
 {% block content %}
   {% include 'admin/management_nav.html' %}
   <h1>Customers</h1>
-  <table>
-    <tr><th>Username</th><th>Name</th><th>Email</th><th>Actions</th></tr>
+  <table class="admin-table">
+    <thead>
+      <tr><th>Username</th><th>Name</th><th>Email</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
     {% for u in customers %}
       <tr>
         <td>{{ u.username }}</td>
@@ -15,5 +18,6 @@
     {% empty %}
       <tr><td colspan="4">No customers found.</td></tr>
     {% endfor %}
+    </tbody>
   </table>
 {% endblock %}

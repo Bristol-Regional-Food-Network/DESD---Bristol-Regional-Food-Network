@@ -3,8 +3,11 @@
 {% block content %}
   {% include 'admin/management_nav.html' %}
   <h1>Producers</h1>
-  <table>
-    <tr><th>Display Name</th><th>User</th><th>Location</th><th>Actions</th></tr>
+  <table class="admin-table">
+    <thead>
+      <tr><th>Display Name</th><th>User</th><th>Location</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
     {% for p in producers %}
       <tr>
         <td>{{ p.display_name }}</td>
@@ -15,5 +18,6 @@
     {% empty %}
       <tr><td colspan="4">No producers found.</td></tr>
     {% endfor %}
+    </tbody>
   </table>
 {% endblock %}

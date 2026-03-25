@@ -7,6 +7,7 @@ class UserProfile(models.Model):
     roles = [
         ('customer', 'Customer'),
         ('producer', 'Producer'),
+        ('admin', 'Admin'),
     ]
     # One-to-one with the built-in User model to link user profiles to users
     user = models.OneToOneField(User, on_delete=models.CASCADE)
