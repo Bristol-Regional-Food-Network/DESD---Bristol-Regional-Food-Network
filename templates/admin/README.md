@@ -34,3 +34,8 @@ python manage.py runserver
 - Customers: `/management/customers/`
 - Producers: `/management/producers/`
 - Django admin (unchanged): `/admin/`
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> cb9dc9a (Include README and migration for admin role)
