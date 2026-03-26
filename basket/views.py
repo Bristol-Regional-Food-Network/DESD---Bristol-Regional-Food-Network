@@ -136,7 +136,10 @@ def _build_checkout_groups(basket, customer_postcode=""):
             removed_items.append(product_id)
             continue
 
-        requested_quantity = int(item.get("quantity", 1))
+        try:
+            requested_quantity = int(item.get("quantity", 1))
+        except (TypeError, ValueError):
+            requested_quantity = 1
         quantity = min(max(requested_quantity, 1), stock)
 
         current_price = Decimal(str(product.active_price))
@@ -438,6 +441,7 @@ def checkout(request):
                         order=order,
                         producer_order=producer_order,
                         product=product,
+                        producer=getattr(product, "producer", None) if product else None,
                         product_name=item["name"],
                         producer_name=item["producer"],
                         unit_display=item["unit_display"],
