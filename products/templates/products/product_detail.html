@@ -1,235 +1,223 @@
 {% extends "base/base.html" %}
 
-{% block title %}Marketplace{% endblock %}
+{% block title %}{{ product.name }} | BRFN{% endblock %}
 
 {% block content %}
 <div class="container py-4">
-    <h1 class="mb-2">Marketplace</h1>
-    <p class="text-muted mb-4">Browse fresh products from local producers.</p>
 
-    <div class="mb-5">
-        <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#E67E22;">
-            <strong>Surplus Deals</strong>
+  <div class="mb-4">
+    <a class="btn btn-outline-dark btn-sm" href="{% url 'products:product_list' %}">
+      ← Back to Products
+    </a>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <h1 class="h3 mb-1">{{ product.name }}</h1>
+          <div class="text-muted">
+            Producer: {{ product.producer.display_name }}
+          </div>
+          {% if product.producer.location %}
+            <div class="text-muted small">
+              Farm location: {{ product.producer.location }}
+            </div>
+          {% endif %}
         </div>
 
-        {% if surplus_products %}
-            <div class="row g-3">
-                {% for product in surplus_products %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card shadow-sm h-100 rounded-4 border-warning">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-0">{{ product.name }}</h5>
-                                    <span class="badge bg-warning text-dark">{{ product.surplus_discount_percent }}% OFF</span>
-                                </div>
-
-                                <p class="text-muted small mb-2">
-                                    {{ product.description|default:"No description available."|truncatechars:100 }}
-                                </p>
-
-                                <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
-
-                                {% if product.surplus_note %}
-                                    <p class="small text-muted mb-1">{{ product.surplus_note }}</p>
-                                {% endif %}
-
-                                {% if product.best_before_date %}
-                                    <p class="small text-danger mb-1"><strong>Best before:</strong> {{ product.best_before_date }}</p>
-                                {% endif %}
-
-                                <p class="small text-danger mb-2"><strong>{{ product.surplus_time_remaining }}</strong></p>
-
-                                <p class="mb-3">
-                                    <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
-                                    <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
-                                </p>
-
-                                <div class="mt-auto d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">Stock: {{ product.stock }}</small>
-                                    <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-warning">
-                                        View Deal
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
+        <div class="text-end">
+          {% if product.is_surplus_active %}
+            <div class="mb-1">
+              <span class="badge bg-warning text-dark">{{ product.surplus_discount_percent }}% OFF</span>
             </div>
-        {% else %}
-            <p class="text-muted">No surplus deals available right now.</p>
-        {% endif %}
-    </div>
+            <span class="badge text-bg-light border fs-6">
+              <span class="text-muted text-decoration-line-through me-2">£{{ product.price|floatformat:2 }}</span>
+              £{{ product.active_price|floatformat:2 }} per {{ product.unit_display }}
+            </span>
+          {% elif product.discount_percent > 0 %}
+            <div class="mb-1">
+              <span class="badge bg-danger">{{ product.discount_percent }}% OFF</span>
+            </div>
+            <span class="badge text-bg-light border fs-6">
+              <span class="text-muted text-decoration-line-through me-2">£{{ product.price|floatformat:2 }}</span>
+              £{{ product.active_price|floatformat:2 }} per {{ product.unit_display }}
+            </span>
+          {% else %}
+            <span class="badge text-bg-light border fs-6">
+              £{{ product.active_price|floatformat:2 }} per {{ product.unit_display }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
 
-    <div class="mb-5">
-        <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#4CAF50;">
-            <strong>Seasonal Items</strong>
+      <hr>
+
+      <div class="row g-4">
+        <div class="col-lg-7">
+          <h2 class="h6">Description</h2>
+          <p class="text-muted">
+            {{ product.description|default:"No description provided." }}
+          </p>
+
+          <div class="mt-3">
+            <p class="mb-2"><strong>Status:</strong> {{ product.customer_status }}</p>
+
+            {% if product.season_range_display %}
+              <p class="mb-2 text-muted">
+                <strong>Season:</strong> {{ product.season_range_display }}
+              </p>
+            {% endif %}
+
+            {% if product.best_before_date %}
+              <p class="mb-2 text-danger">
+                <strong>Best before:</strong> {{ product.best_before_date }}
+              </p>
+            {% endif %}
+
+            {% if product.surplus_note %}
+              <p class="mb-2 text-muted">
+                <strong>Surplus note:</strong> {{ product.surplus_note }}
+              </p>
+            {% endif %}
+
+            {% if product.is_surplus_active %}
+              <p class="mb-2 text-danger">
+                <strong>{{ product.surplus_time_remaining }}</strong>
+              </p>
+            {% endif %}
+
+            <p class="mb-0 text-muted">
+              <strong>Stock:</strong> {{ product.stock }}
+            </p>
+          </div>
         </div>
 
-        {% if seasonal_products %}
-            <div class="row g-3">
-                {% for product in seasonal_products %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card shadow-sm h-100 rounded-4">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-0">{{ product.name }}</h5>
-                                    <span class="badge bg-success">£{{ product.active_price|floatformat:2 }}</span>
-                                </div>
+        <div class="col-lg-5">
+          <div class="border rounded p-3 bg-light">
+            <h2 class="h6 mb-3">Food Miles</h2>
 
-                                <p class="text-muted small mb-2">
-                                    {{ product.description|default:"No description available."|truncatechars:100 }}
-                                </p>
+            <form method="get" class="mb-3">
+              <label for="postcode" class="form-label">Your postcode</label>
+              <div class="d-flex gap-2">
+                <input
+                  type="text"
+                  id="postcode"
+                  name="postcode"
+                  class="form-control"
+                  value="{{ customer_postcode }}"
+                  placeholder="e.g. BS1 4DJ"
+                >
+                <button type="submit" class="btn btn-outline-dark">Update</button>
+              </div>
+            </form>
 
-                                <p class="small mb-2">
-                                    <strong>Producer:</strong> {{ product.producer.display_name }}
-                                </p>
-
-                                <div class="mb-2">
-                                    {% if product.customer_status == "In Season" %}
-                                        <span class="badge bg-success">In Season</span>
-                                    {% elif product.customer_status == "Available Year-Round" %}
-                                        <span class="badge bg-primary">Available Year-Round</span>
-                                    {% endif %}
-                                </div>
-
-                                {% if product.season_range_display %}
-                                    <p class="small text-muted mb-2">
-                                        Available: {{ product.season_range_display }}
-                                    </p>
-                                {% endif %}
-
-                                <div class="mt-auto d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">Stock: {{ product.stock }}</small>
-                                    <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-success">
-                                        View
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p class="text-muted">No seasonal items available.</p>
-        {% endif %}
-    </div>
-
-    <div class="mb-5">
-        <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#FF5252;">
-            <strong>Discounted Items</strong>
+            {% if food_miles is not None %}
+              <div class="fw-semibold">Estimated food miles: {{ food_miles }} miles</div>
+              <div class="text-muted small mt-1">
+                Calculated from your postcode to the producer postcode.
+              </div>
+            {% else %}
+              <div class="text-muted small">
+                Enter your postcode to estimate the distance from this producer.
+              </div>
+            {% endif %}
+          </div>
         </div>
+      </div>
 
-        {% if discounted_products %}
-            <div class="row g-3">
-                {% for product in discounted_products %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card shadow-sm h-100 rounded-4 position-relative">
-                            {% if product.discount_percent > 0 %}
-                                <span class="badge bg-danger position-absolute top-0 start-0 m-2">
-                                    {{ product.discount_percent }}% OFF
-                                </span>
-                            {% endif %}
+      {% if product.is_visible_to_customers %}
+        <form method="post" action="{% url 'basket:basket_add' product.id %}" class="mt-4">
+          {% csrf_token %}
 
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2 mt-3">
-                                    <h5 class="card-title mb-0">{{ product.name }}</h5>
-                                </div>
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <label for="quantity" class="fw-semibold mb-0">Quantity</label>
 
-                                <p class="text-muted small mb-2">
-                                    {{ product.description|default:"No description available."|truncatechars:100 }}
-                                </p>
+            <div class="d-flex align-items-center gap-2">
+              <button
+                type="button"
+                class="btn btn-outline-dark btn-sm"
+                onclick="decreaseQty()"
+              >
+                -
+              </button>
 
-                                <p class="small mb-2">
-                                    <strong>Producer:</strong> {{ product.producer.display_name }}
-                                </p>
+              <input
+                type="text"
+                id="quantity"
+                name="quantity"
+                value="1"
+                class="form-control text-center"
+                style="width: 80px;"
+              >
 
-                                <div class="mb-2">
-                                    {% if product.customer_status == "In Season" %}
-                                        <span class="badge bg-success">In Season</span>
-                                    {% elif product.customer_status == "Available Year-Round" %}
-                                        <span class="badge bg-primary">Available Year-Round</span>
-                                    {% endif %}
-                                </div>
-
-                                {% if product.season_range_display %}
-                                    <p class="small text-muted mb-2">
-                                        Available: {{ product.season_range_display }}
-                                    </p>
-                                {% endif %}
-
-                                <p class="mb-2">
-                                    <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
-                                    <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
-                                </p>
-
-                                <div class="mt-auto d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">Stock: {{ product.stock }}</small>
-                                    <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-danger">
-                                        View
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
+              <button
+                type="button"
+                class="btn btn-outline-dark btn-sm"
+                onclick="increaseQty()"
+              >
+                +
+              </button>
             </div>
-        {% else %}
-            <p class="text-muted">No discounted items available.</p>
-        {% endif %}
-    </div>
 
-    <div class="mb-5">
-        <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#2196F3;">
-            <strong>All Items</strong>
+            <button type="submit" class="btn btn-dark btn-sm">
+              Add to Basket
+            </button>
+
+            <a class="btn btn-outline-dark btn-sm" href="{% url 'basket:basket_detail' %}">
+              View Basket
+            </a>
+
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'save_product' product.id %}">
+              Save
+            </a>
+          </div>
+        </form>
+      {% else %}
+        <div class="alert alert-warning mt-4 mb-0">
+          This product is currently not available to order.
         </div>
+      {% endif %}
 
-        {% if all_products %}
-            <div class="row g-3">
-                {% for product in all_products %}
-                    <div class="col-md-6 col-lg-4">
-                        <div class="card shadow-sm h-100 rounded-4">
-                            <div class="card-body d-flex flex-column">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h5 class="card-title mb-0">{{ product.name }}</h5>
-                                    <span class="badge bg-primary">£{{ product.active_price|floatformat:2 }}</span>
-                                </div>
-
-                                <p class="text-muted small mb-2">
-                                    {{ product.description|default:"No description available."|truncatechars:100 }}
-                                </p>
-
-                                <p class="small mb-2">
-                                    <strong>Producer:</strong> {{ product.producer.display_name }}
-                                </p>
-
-                                <div class="mb-2">
-                                    {% if product.customer_status == "In Season" %}
-                                        <span class="badge bg-success">In Season</span>
-                                    {% elif product.customer_status == "Available Year-Round" %}
-                                        <span class="badge bg-primary">Available Year-Round</span>
-                                    {% endif %}
-                                </div>
-
-                                {% if product.season_range_display %}
-                                    <p class="small text-muted mb-2">
-                                        Available: {{ product.season_range_display }}
-                                    </p>
-                                {% endif %}
-
-                                <div class="mt-auto d-flex justify-content-between align-items-center">
-                                    <small class="text-muted">Stock: {{ product.stock }}</small>
-                                    <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
-                                        View
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <p class="text-muted">No regular items available.</p>
-        {% endif %}
     </div>
+  </div>
 </div>
+
+<script>
+  function increaseQty() {
+    const input = document.getElementById("quantity");
+    let value = parseInt(input.value);
+
+    if (isNaN(value) || value < 1) {
+      value = 1;
+    }
+
+    input.value = value + 1;
+  }
+
+  function decreaseQty() {
+    const input = document.getElementById("quantity");
+    let value = parseInt(input.value);
+
+    if (isNaN(value) || value <= 1) {
+      input.value = "1";
+      return;
+    }
+
+    input.value = value - 1;
+  }
+
+  const basketForm = document.querySelector('form[action*="basket"]');
+  if (basketForm) {
+    basketForm.addEventListener("submit", function () {
+      const input = document.getElementById("quantity");
+
+      if (input.value === "-" || input.value === "" || isNaN(parseInt(input.value)) || parseInt(input.value) < 1) {
+        input.value = "1";
+      }
+    });
+  }
+</script>
+
 {% endblock %}

@@ -8,7 +8,10 @@ class ProductAdmin(admin.ModelAdmin):
         "name",
         "producer",
         "price",
+        "unit_value",
+        "unit",
         "stock",
+        "category",
         "section",
         "discount_percent",
         "availability_mode",
@@ -17,7 +20,9 @@ class ProductAdmin(admin.ModelAdmin):
         "surplus_expires_at",
     )
     list_filter = (
+        "category",
         "section",
+        "unit",
         "availability_mode",
         "is_surplus",
         "producer",
@@ -29,3 +34,4 @@ class ProductAdmin(admin.ModelAdmin):
         "producer__display_name",
         "surplus_note",
     )
+    ordering = ("name",)

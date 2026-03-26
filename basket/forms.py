@@ -60,24 +60,18 @@ class PaymentForm(forms.Form):
 
     city = forms.CharField(
         max_length=100,
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-        })
+        widget=forms.TextInput(attrs={"class": "form-control"})
     )
 
     postcode = forms.CharField(
         max_length=20,
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-        })
+        widget=forms.TextInput(attrs={"class": "form-control"})
     )
 
     country = forms.CharField(
         max_length=100,
         initial="UK",
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-        })
+        widget=forms.TextInput(attrs={"class": "form-control"})
     )
 
     def clean_card_number(self):

@@ -1,9 +1,12 @@
 from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 import json
+import math
+import re
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 from django.http import HttpRequest, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,6 +17,46 @@ from users.decorators import role_required
 from .forms import ProductForm
 from .models import Product
 from producers.models import Producer
+
+
+POSTCODE_COORDS = {
+    "BS1": (51.4545, -2.5879),
+    "BS2": (51.4590, -2.5850),
+    "BS3": (51.4416, -2.6010),
+    "BS4": (51.4340, -2.5610),
+    "BS5": (51.4620, -2.5480),
+    "BS6": (51.4700, -2.6100),
+    "BS7": (51.4860, -2.5910),
+    "BS8": (51.4580, -2.6200),
+    "BS9": (51.4850, -2.6310),
+    "BS10": (51.5050, -2.6210),
+    "BS11": (51.4950, -2.6750),
+    "BS13": (51.4120, -2.6110),
+    "BS14": (51.4140, -2.5590),
+    "BS15": (51.4570, -2.5050),
+    "BS16": (51.4860, -2.5110),
+    "BS20": (51.4790, -2.7640),
+    "BS21": (51.4380, -2.8500),
+    "BS22": (51.3590, -2.9280),
+    "BS23": (51.3460, -2.9770),
+    "BS24": (51.3270, -2.9310),
+    "BS30": (51.4460, -2.4720),
+    "BS31": (51.4070, -2.4950),
+    "BS32": (51.5430, -2.5620),
+    "BS34": (51.5250, -2.5640),
+    "BS35": (51.6040, -2.5470),
+    "BS36": (51.5260, -2.4860),
+    "BS37": (51.5400, -2.4180),
+    "BS39": (51.3280, -2.4980),
+    "BS40": (51.3810, -2.6900),
+    "BS41": (51.4300, -2.6520),
+    "BS48": (51.4260, -2.7480),
+    "BS49": (51.3820, -2.8170),
+    "BA1": (51.3870, -2.3590),
+    "BA2": (51.3590, -2.3880),
+    "GL12": (51.6200, -2.3800),
+    "SN14": (51.5100, -2.1900),
+}
 
 
 def _json_error(message: str, status: int = 400, **extra):
@@ -32,6 +75,55 @@ def _parse_json(request: HttpRequest):
         return None
 
 
+def _normalise_postcode(postcode):
+    if not postcode:
+        return ""
+    return re.sub(r"\s+", "", str(postcode).upper())
+
+
+def _postcode_area(postcode):
+    cleaned = _normalise_postcode(postcode)
+    match = re.match(r"^[A-Z]{1,2}\d{1,2}[A-Z]?", cleaned)
+    return match.group(0) if match else ""
+
+
+def _haversine_miles(lat1, lon1, lat2, lon2):
+    radius_miles = 3958.8
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    d_phi = math.radians(lat2 - lat1)
+    d_lambda = math.radians(lon2 - lon1)
+
+    a = (
+        math.sin(d_phi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+    )
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return radius_miles * c
+
+
+def _estimate_food_miles(customer_postcode, producer_postcode):
+    customer_area = _postcode_area(customer_postcode)
+    producer_area = _postcode_area(producer_postcode)
+
+    if not customer_area or not producer_area:
+        return None
+
+    customer_coords = POSTCODE_COORDS.get(customer_area)
+    producer_coords = POSTCODE_COORDS.get(producer_area)
+
+    if not customer_coords or not producer_coords:
+        return None
+
+    miles = _haversine_miles(
+        customer_coords[0],
+        customer_coords[1],
+        producer_coords[0],
+        producer_coords[1],
+    )
+    return round(miles, 1)
+
+
 def _product_to_dict(product: Product):
     return {
         "id": product.id,
@@ -40,8 +132,11 @@ def _product_to_dict(product: Product):
         "price": str(product.price),
         "stock": product.stock,
         "section": product.section,
+        "category": product.category,
+        "category_display": product.get_category_display(),
         "discount_percent": product.discount_percent,
         "discounted_price": str(product.discounted_price),
+        "availability_label": product.availability_label,
         "availability_mode": product.availability_mode,
         "season_start_month": product.season_start_month,
         "season_end_month": product.season_end_month,
@@ -137,7 +232,25 @@ def _visible_products_queryset():
 
 
 def product_list(request):
+    selected_category = request.GET.get("category", "all")
+    q = request.GET.get("q", "").strip()
+
     visible_products = _visible_products_queryset()
+
+    if q:
+        q_lower = q.lower()
+        visible_products = [
+            p for p in visible_products
+            if (
+                q_lower in p.name.lower()
+                or q_lower in (p.description or "").lower()
+                or q_lower in (getattr(p.producer, "display_name", "") or "").lower()
+                or q_lower in (getattr(p.producer, "farm_name", "") or "").lower()
+            )
+        ]
+
+    if selected_category != "all":
+        visible_products = [p for p in visible_products if p.category == selected_category]
 
     surplus_products = [p for p in visible_products if p.is_surplus_active]
     seasonal_products = [
@@ -153,6 +266,16 @@ def product_list(request):
         if p.section == Product.SECTION_ALL and not p.is_surplus_active
     ]
 
+    categories = [
+        ("all", "All Categories"),
+        (Product.CATEGORY_VEGETABLES, "Vegetables"),
+        (Product.CATEGORY_FRUITS, "Fruits"),
+        (Product.CATEGORY_DAIRY, "Dairy Products"),
+        (Product.CATEGORY_BAKERY, "Bakery Goods"),
+        (Product.CATEGORY_PRESERVES, "Preserves"),
+        (Product.CATEGORY_SEASONAL_SPECIALITIES, "Seasonal Specialities"),
+    ]
+
     return render(
         request,
         "products/product_list.html",
@@ -161,6 +284,9 @@ def product_list(request):
             "seasonal_products": seasonal_products,
             "discounted_products": discounted_products,
             "all_products": all_products,
+            "categories": categories,
+            "selected_category": selected_category,
+            "query": q,
         },
     )
 
@@ -178,7 +304,24 @@ def product_detail(request, product_id):
         messages.error(request, "This product is currently not available for customers.")
         return redirect("products:product_list")
 
-    return render(request, "products/product_detail.html", {"product": product})
+    postcode_param = request.GET.get("postcode", "").strip()
+    if postcode_param:
+        request.session["customer_postcode"] = postcode_param
+        request.session.modified = True
+
+    customer_postcode = request.session.get("customer_postcode", "")
+    producer_postcode = getattr(product.producer, "postcode", "")
+    food_miles = _estimate_food_miles(customer_postcode, producer_postcode)
+
+    return render(
+        request,
+        "products/product_detail.html",
+        {
+            "product": product,
+            "customer_postcode": customer_postcode,
+            "food_miles": food_miles,
+        },
+    )
 
 
 @login_required
@@ -196,7 +339,7 @@ def add_product(request):
             product = form.save(commit=False)
             product.producer = producer
 
-            if product.section != Product.SECTION_DISCOUNTED:
+            if product.section != Product.SECTION_DISCOUNTED and not product.is_surplus:
                 product.discount_percent = 0
 
             surplus_duration_hours = form.cleaned_data.get("surplus_duration_hours")
@@ -287,12 +430,20 @@ def api_product_collection(request: HttpRequest):
         products = Product.objects.select_related("producer").all().order_by("-id")
         producer_id = request.GET.get("producer_id")
         q = request.GET.get("q")
+        category = request.GET.get("category")
         visible_only = request.GET.get("visible_only")
 
         if producer_id:
             products = products.filter(producer_id=producer_id)
         if q:
-            products = products.filter(name__icontains=q)
+            products = products.filter(
+                Q(name__icontains=q)
+                | Q(description__icontains=q)
+                | Q(producer__display_name__icontains=q)
+                | Q(producer__farm_name__icontains=q)
+            ).distinct()
+        if category:
+            products = products.filter(category=category)
 
         product_list_result = list(products)
         if visible_only == "true":
@@ -318,7 +469,11 @@ def api_product_collection(request: HttpRequest):
         price = _coerce_price(payload.get("price"))
         stock = _coerce_stock(payload.get("stock"), default=0)
         discount_percent = _coerce_discount_percent(payload.get("discount_percent"), default=0)
-        surplus_discount_percent = _coerce_surplus_discount_percent(payload.get("surplus_discount_percent"), default=0) if payload.get("is_surplus") else 0
+        surplus_discount_percent = (
+            _coerce_surplus_discount_percent(payload.get("surplus_discount_percent"), default=0)
+            if payload.get("is_surplus")
+            else 0
+        )
         availability_mode = _coerce_availability_mode(payload.get("availability_mode"))
         season_start_month = _coerce_month(payload.get("season_start_month"))
         season_end_month = _coerce_month(payload.get("season_end_month"))
@@ -335,6 +490,10 @@ def api_product_collection(request: HttpRequest):
     section = str(payload.get("section", Product.SECTION_ALL)).strip() or Product.SECTION_ALL
     if section not in {choice[0] for choice in Product.SECTION_CHOICES}:
         section = Product.SECTION_ALL
+
+    category_value = str(payload.get("category", Product.CATEGORY_VEGETABLES)).strip() or Product.CATEGORY_VEGETABLES
+    if category_value not in {choice[0] for choice in Product.CATEGORY_CHOICES}:
+        category_value = Product.CATEGORY_VEGETABLES
 
     is_surplus = bool(payload.get("is_surplus", False))
     surplus_note = str(payload.get("surplus_note", "")).strip()
@@ -354,6 +513,7 @@ def api_product_collection(request: HttpRequest):
         price=price,
         stock=stock,
         section=section,
+        category=category_value,
         discount_percent=discount_percent,
         availability_mode=availability_mode,
         season_start_month=season_start_month,
@@ -421,6 +581,11 @@ def api_product_resource(request: HttpRequest, product_id: int):
         section = str(payload["section"]).strip()
         if section in {choice[0] for choice in Product.SECTION_CHOICES}:
             product.section = section
+
+    if "category" in payload:
+        category_value = str(payload["category"]).strip()
+        if category_value in {choice[0] for choice in Product.CATEGORY_CHOICES}:
+            product.category = category_value
 
     if "discount_percent" in payload:
         try:

@@ -2,7 +2,6 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from .forms import RegistrationForm
 from .models import UserProfile
-from producers.models import Producer
 
 
 def register(request):
@@ -15,19 +14,11 @@ def register(request):
 
             profile, created = UserProfile.objects.get_or_create(user=user)
             profile.role = form.cleaned_data['role']
-            profile.save()
+            profile.address = form.cleaned_data.get('address')
+            profile.postcode = form.cleaned_data.get('postcode')
+            profile.farm_name = form.cleaned_data.get('farm_name')
 
-            if profile.role == "producer":
-                Producer.objects.get_or_create(
-                    user=user,
-                    defaults={
-                        "display_name": user.username,
-                        "bio": "",
-                        "location": "",
-                        "phone": "",
-                        "website": "",
-                    },
-                )
+            profile.save()
 
             login(request, user)
             return redirect('/')

@@ -1,5 +1,4 @@
 from django.shortcuts import get_object_or_404, redirect, render
-from django.db.models import Q
 from products.models import Product
 
 
@@ -15,8 +14,8 @@ def dashboard(request):
             if (
                 query.lower() in product.name.lower()
                 or query.lower() in (product.description or "").lower()
-                or query.lower() in (product.producer.farm_name or "").lower()
-                or query.lower() in (product.producer.display_name or "").lower()
+                or query.lower() in (getattr(product.producer, "farm_name", "") or "").lower()
+                or query.lower() in (getattr(product.producer, "display_name", "") or "").lower()
             )
         ]
 
@@ -47,7 +46,7 @@ def saved_products(request):
 
 
 def save_product(request, product_id):
-    product = get_object_or_404(Product, id=product_id)
+    product = get_object_or_404(Product.objects.select_related("producer"), id=product_id)
 
     if not product.is_visible_to_customers:
         return redirect("products:product_list")
@@ -58,7 +57,7 @@ def save_product(request, product_id):
     if product_id not in saved:
         saved[product_id] = {
             "name": product.name,
-            "price": float(product.price),
+            "price": float(product.active_price if hasattr(product, "active_price") else product.price),
             "description": product.description,
             "producer": str(product.producer) if product.producer else "",
         }
