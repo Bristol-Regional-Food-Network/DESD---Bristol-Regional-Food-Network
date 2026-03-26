@@ -1,0 +1,37 @@
+{% extends "base/base.html" %}
+
+{% block title %}Customers | Manager Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1>Customers</h1>
+    <p class="mb-3">Registered customers.</p>
+
+    <div class="table-responsive shadow-sm rounded bg-white p-3">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Address</th>
+                    <th>Postcode</th>
+                    <th>Joined</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in customers %}
+                <tr>
+                    <td>{{ u.username }}</td>
+                    <td>{{ u.email }}</td>
+                    <td>{{ u.userprofile.address|default:'–' }}</td>
+                    <td>{{ u.userprofile.postcode|default:'–' }}</td>
+                    <td>{{ u.date_joined|date:"Y-m-d" }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-muted">No customers found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

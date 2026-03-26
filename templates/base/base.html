@@ -43,6 +43,15 @@
                     </a>
                 </li>
 
+                {# Manager dashboard link - only visible to users with manager role #}
+                {% if user.is_authenticated and user.userprofile.role == "manager" %}
+                <li class="nav-item">
+                    <a class="nav-link btn btn-success text-white" href="{% url 'manager_dashboard' %}">
+                        Manager Dashboard
+                    </a>
+                </li>
+                {% endif %}
+
                 {% if user.is_authenticated %}
 
                     <!-- Username -->
