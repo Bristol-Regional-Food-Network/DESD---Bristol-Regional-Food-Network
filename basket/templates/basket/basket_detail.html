@@ -1,0 +1,60 @@
+{% extends "base/base.html" %}
+
+{% block title %}Your Basket | BRFN{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1 class="h3 mb-4">Your Basket</h1>
+
+  {% if basket_items %}
+    <div class="card shadow-sm">
+      <div class="card-body">
+
+        {% for item in basket_items %}
+          <div class="d-flex justify-content-between align-items-center border-bottom py-3">
+            <div>
+              <h2 class="h6 mb-1">{{ item.name }}</h2>
+              <div class="text-muted small">£{{ item.price|floatformat:2 }} each</div>
+              <div class="small">Subtotal: £{{ item.subtotal|floatformat:2 }}</div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+              <form method="post" action="{% url 'basket:basket_update' item.product_id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="decrease">
+                <button type="submit" class="btn btn-outline-dark btn-sm">-</button>
+              </form>
+
+              <span class="px-2">{{ item.quantity }}</span>
+
+              <form method="post" action="{% url 'basket:basket_update' item.product_id %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="increase">
+                <button type="submit" class="btn btn-outline-dark btn-sm">+</button>
+              </form>
+
+              <form method="post" action="{% url 'basket:basket_remove' item.product_id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+
+        <div class="mt-4 d-flex justify-content-between align-items-center">
+          <h3 class="h5 mb-0">Total: £{{ basket_total|floatformat:2 }}</h3>
+
+          <a class="btn btn-dark" href="{% url 'basket:checkout' %}">
+            Checkout
+          </a>
+        </div>
+
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      Your basket is empty.
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

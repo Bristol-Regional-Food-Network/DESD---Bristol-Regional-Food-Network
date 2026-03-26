@@ -1,0 +1,85 @@
+{% extends "base/base.html" %}
+
+{% block title %}Producer Order Detail{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                <h1 class="mb-0">Order #{{ order.id }}</h1>
+                <span class="badge status-badge status-badge--{{ order.status }}">{{ order.get_status_display }}</span>
+            </div>
+            <p class="text-muted mb-0">Customer: {{ order.customer.username }} · Placed {{ order.created_at|date:"d M Y, H:i" }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'producers:producer_orders' %}" class="btn btn-outline-dark">Back to Orders</a>
+            {% if order.status != 'cancelled' and not all_items_finalised %}
+                <form method="post" action="{% url 'producers:bulk_fulfil_order' order.id %}" onsubmit="return confirm('Mark all pending items in this order as fulfilled?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Mark All Fulfilled</button>
+                </form>
+            {% else %}
+                <button type="button" class="btn btn-outline-secondary" disabled>Nothing left to fulfil</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><h6 class="text-muted">Order status</h6><div class="fs-5 fw-bold">{{ order.get_status_display }}</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><h6 class="text-muted">Producer total</h6><div class="fs-5 fw-bold">£{{ producer_total }}</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><h6 class="text-muted">Pending lines</h6><div class="fs-5 fw-bold">{{ pending_line_count }}</div></div></div></div>
+        <div class="col-md-3"><div class="card h-100"><div class="card-body"><h6 class="text-muted">Fulfilled lines</h6><div class="fs-5 fw-bold">{{ fulfilled_line_count }}</div></div></div></div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h3 class="mb-0">Your items in this order</h3>
+                <small class="text-muted">Only items belonging to {{ producer.display_name }} are shown here.</small>
+            </div>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Line Total</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in producer_items %}
+                            <tr>
+                                <td>{{ item.product.name }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td>£{{ item.unit_price }}</td>
+                                <td>£{{ item.line_total }}</td>
+                                <td><span class="badge status-badge status-badge--{{ item.fulfilment_status }}">{{ item.get_fulfilment_status_display }}</span></td>
+                                <td>
+                                    {% if order.status == "cancelled" or item.fulfilment_status == 'cancelled' %}
+                                        <span class="text-muted">Order cancelled</span>
+                                    {% elif item.fulfilment_status == 'fulfilled' %}
+                                        <button type="button" class="btn btn-sm btn-outline-success" disabled>Already fulfilled</button>
+                                    {% else %}
+                                        <form method="post" action="{% url 'producers:update_order_item_status' item.id %}" class="d-flex gap-2" onsubmit="return confirm('Update {{ item.product.name }} to the selected fulfilment status?');">
+                                            {% csrf_token %}
+                                            <select name="fulfilment_status" class="form-select form-select-sm">
+                                                <option value="pending" {% if item.fulfilment_status == "pending" %}selected{% endif %}>Pending</option>
+                                                <option value="fulfilled" {% if item.fulfilment_status == "fulfilled" %}selected{% endif %}>Fulfilled</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-sm btn-dark">Save</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

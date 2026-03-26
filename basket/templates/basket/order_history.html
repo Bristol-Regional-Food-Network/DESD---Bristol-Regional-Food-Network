@@ -1,0 +1,26 @@
+{% extends "base/base.html" %}
+
+{% block title %}My Orders{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">My Orders</h1>
+
+    {% if orders %}
+        <div class="list-group">
+            {% for order in orders %}
+                <a href="{% url 'basket:order_detail' order.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between">
+                        <strong>Order #{{ order.id }}</strong>
+                        <span>{{ order.created_at }}</span>
+                    </div>
+                    <div>Status: {{ order.status }}</div>
+                    <div>Total: £{{ order.total_amount }}</div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No orders yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
