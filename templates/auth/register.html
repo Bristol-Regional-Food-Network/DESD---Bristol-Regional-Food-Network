@@ -51,6 +51,35 @@
             {% endif %}
           </div>
 
+          <div id="extra-fields">
+            
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.address.id_for_label }}">Address</label>
+              {{ form.address }}
+              {% if form.address.errors %}
+                <div class="text-danger small">{{ form.address.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.postcode.id_for_label }}">Postcode</label>
+              {{ form.postcode }}
+              {% if form.postcode.errors %}
+                <div class="text-danger small">{{ form.postcode.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3" id="farm-field">
+              <label class="form-label" for="{{ form.farm_name.id_for_label }}">Farm Name</label>
+              {{ form.farm_name }}
+              {% if form.farm_name.errors %}
+                <div class="text-danger small">{{ form.farm_name.errors }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+
+
           <button class="btn btn-warning w-100" type="submit">Create account</button>
         </form>
 
@@ -62,4 +91,34 @@
     </div>
   </div>
 </div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const roleField = document.getElementById("id_role");
+    const extraFields = document.getElementById("extra-fields");
+    const farmField = document.getElementById("farm-field");
+
+    function updateFields() {
+        const role = roleField.value;
+
+        // Customer and Producer shows address and postcode
+        if (role === "customer" || role === "producer") {
+            extraFields.style.display = "block";
+
+            // Only producer shows farm name
+            if (role === "producer") {
+                farmField.style.display = "block";
+            } else {
+                farmField.style.display = "none";
+            }
+
+        } else {
+            // AI Engineer and Manager hide all extra fields
+            extraFields.style.display = "none";
+        }
+    }
+
+    roleField.addEventListener("change", updateFields);
+    updateFields();
+});
+</script>
 {% endblock %}

@@ -1,25 +1,9 @@
 from django.shortcuts import get_object_or_404, redirect, render
-from django.db.models import Q
 from products.models import Product
 
 
 def dashboard(request):
-    query = request.GET.get("q", "").strip()
-
-    products = Product.objects.select_related("producer").all()
-
-    if query:
-        products = products.filter(
-            Q(name__icontains=query) |
-            Q(description__icontains=query)
-        ).distinct()
-
-    products = products[:4]
-
-    return render(request, "customers/dashboard.html", {
-        "products": products,
-        "query": query,
-    })
+    return redirect("products:product_list")
 
 
 def saved_products(request):
@@ -55,7 +39,7 @@ def save_product(request, product_id):
         }
 
     request.session.modified = True
-    return redirect("customers:dashboard")
+    return redirect("products:product_list")
 
 
 def remove_saved_product(request, product_id):

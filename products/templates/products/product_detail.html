@@ -18,21 +18,62 @@
         <div>
           <h1 class="h3 mb-1">{{ product.name }}</h1>
           <div class="text-muted">
-            Producer: {{ product.producer.farm_name }}
+            Producer: {{ product.producer.display_name }}
           </div>
+          {% if product.producer.location %}
+            <div class="text-muted small">
+              Farm location: {{ product.producer.location }}
+            </div>
+          {% endif %}
         </div>
 
         <span class="badge text-bg-light border fs-6">
-          £{{ product.price|floatformat:2 }}
+          £{{ product.price|floatformat:2 }} per {{ product.unit_display }}
         </span>
       </div>
 
       <hr>
 
-      <h2 class="h6">Description</h2>
-      <p class="text-muted">
-        {{ product.description|default:"No description provided." }}
-      </p>
+      <div class="row g-4">
+        <div class="col-lg-7">
+          <h2 class="h6">Description</h2>
+          <p class="text-muted">
+            {{ product.description|default:"No description provided." }}
+          </p>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="border rounded p-3 bg-light">
+            <h2 class="h6 mb-3">Food Miles</h2>
+
+            <form method="get" class="mb-3">
+              <label for="postcode" class="form-label">Your postcode</label>
+              <div class="d-flex gap-2">
+                <input
+                  type="text"
+                  id="postcode"
+                  name="postcode"
+                  class="form-control"
+                  value="{{ customer_postcode }}"
+                  placeholder="e.g. BS1 4DJ"
+                >
+                <button type="submit" class="btn btn-outline-dark">Update</button>
+              </div>
+            </form>
+
+            {% if food_miles is not None %}
+              <div class="fw-semibold">Estimated food miles: {{ food_miles }} miles</div>
+              <div class="text-muted small mt-1">
+                Calculated from your postcode to the producer postcode.
+              </div>
+            {% else %}
+              <div class="text-muted small">
+                Enter your postcode to estimate the distance from this producer.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
 
       <form method="post" action="{% url 'basket:basket_add' product.id %}" class="mt-4">
         {% csrf_token %}
@@ -41,19 +82,30 @@
           <label for="quantity" class="fw-semibold mb-0">Quantity</label>
 
           <div class="d-flex align-items-center gap-2">
-            <button type="button" class="btn btn-outline-dark btn-sm" onclick="decreaseQty()">-</button>
+            <button
+              type="button"
+              class="btn btn-outline-dark btn-sm"
+              onclick="decreaseQty()"
+            >
+              -
+            </button>
 
             <input
-              type="number"
+              type="text"
               id="quantity"
               name="quantity"
               value="1"
-              min="1"
               class="form-control text-center"
               style="width: 80px;"
             >
 
-            <button type="button" class="btn btn-outline-dark btn-sm" onclick="increaseQty()">+</button>
+            <button
+              type="button"
+              class="btn btn-outline-dark btn-sm"
+              onclick="increaseQty()"
+            >
+              +
+            </button>
           </div>
 
           <button type="submit" class="btn btn-dark btn-sm">
@@ -76,16 +128,35 @@
 
 <script>
   function increaseQty() {
-    const qtyInput = document.getElementById("quantity");
-    qtyInput.value = parseInt(qtyInput.value || 1) + 1;
+    const input = document.getElementById("quantity");
+    let value = parseInt(input.value);
+
+    if (isNaN(value) || value < 1) {
+      value = 1;
+    }
+
+    input.value = value + 1;
   }
 
   function decreaseQty() {
-    const qtyInput = document.getElementById("quantity");
-    const currentValue = parseInt(qtyInput.value || 1);
-    if (currentValue > 1) {
-      qtyInput.value = currentValue - 1;
+    const input = document.getElementById("quantity");
+    let value = parseInt(input.value);
+
+    if (isNaN(value) || value <= 1) {
+      input.value = "1";
+      return;
     }
+
+    input.value = value - 1;
   }
+
+  document.querySelector('form[action*="basket"]').addEventListener("submit", function () {
+    const input = document.getElementById("quantity");
+
+    if (input.value === "-" || input.value === "" || isNaN(parseInt(input.value)) || parseInt(input.value) < 1) {
+      input.value = "1";
+    }
+  });
 </script>
+
 {% endblock %}

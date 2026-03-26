@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "users.apps.UsersConfig",
     "customers",
     "basket",
+    "managers",
 ]
 
 MIDDLEWARE = [
