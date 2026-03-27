@@ -1,0 +1,23 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  {% include 'admin/management_nav.html' %}
+  <h1>Producers</h1>
+  <table class="admin-table">
+    <thead>
+      <tr><th>Display Name</th><th>User</th><th>Location</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for p in producers %}
+      <tr>
+        <td>{{ p.display_name }}</td>
+        <td>{{ p.user.username }}</td>
+        <td>{{ p.location }}</td>
+        <td><a href="{% url 'admin_producer_edit' p.pk %}">Edit</a></td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="4">No producers found.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

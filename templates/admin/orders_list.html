@@ -1,0 +1,29 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  {% include 'admin/management_nav.html' %}
+  <h1>Orders</h1>
+  <div class="admin-actions" aria-hidden="true"></div>
+  <table class="admin-table">
+    <thead>
+      <tr><th>#</th><th>Customer</th><th>Amount</th><th>Status</th><th>When</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for o in orders %}
+      <tr>
+        <td><a href="{% url 'admin_order_detail' o.pk %}">{{ o.id }}</a></td>
+        <td>{{ o.customer.username }}</td>
+        <td>{{ o.total_amount }}</td>
+        <td>{{ o.get_status_display }}</td>
+        <td>{{ o.created_at }}</td>
+        <td>
+          <a href="{% url 'admin_order_edit' o.pk %}">Edit</a> |
+          <a href="{% url 'admin_order_delete' o.pk %}">Delete</a>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6">No orders.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

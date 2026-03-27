@@ -5,10 +5,21 @@
 {% block content %}
 <div class="container py-4">
     <h1>Manager Dashboard</h1>
-    <p>Welcome to the manager area. Use the links below to access management tools.</p>
-
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/orders/' in request.path %}active{% endif %}" href="{% url 'manager_orders' %}">Orders</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/customers/' in request.path %}active{% endif %}" href="{% url 'manager_customers' %}">Customers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/producers/' in request.path %}active{% endif %}" href="{% url 'manager_producers' %}">Producers</a>
+        </li>
+    </ul>
+    <p>Welcome to the manager area</p>
+    
     <div class="row mt-4">
-        <div class="col-md-3">
+        <div class="col-md-3 d-none">
             <div class="card shadow-sm h-100">
                 <div class="card-body d-flex flex-column">
                     <h5 class="card-title">Overview</h5>

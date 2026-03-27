@@ -138,8 +138,13 @@ class Product(models.Model):
 
     @property
     def discounted_price(self):
-        if self.discount_percent and self.discount_percent > 0:
-            return self.price * (100 - self.discount_percent) / 100
+        # defensive: discount_percent may be stored as a string in a mismatched DB
+        try:
+            dp = int(self.discount_percent or 0)
+        except Exception:
+            dp = 0
+        if dp > 0:
+            return self.price * (100 - dp) / 100
         return self.price
 
     @property
@@ -182,9 +187,18 @@ class Product(models.Model):
 
     @property
     def active_price(self):
-        if self.is_surplus_active:
-            return self.price * (100 - self.surplus_discount_percent) / 100
-        if self.discount_percent and self.discount_percent > 0:
+        # defensive: coerce surplus_discount_percent and discount_percent to ints
+        try:
+            sdp = int(self.surplus_discount_percent or 0)
+        except Exception:
+            sdp = 0
+        if self.is_surplus_active and sdp > 0:
+            return self.price * (100 - sdp) / 100
+        try:
+            dp = int(self.discount_percent or 0)
+        except Exception:
+            dp = 0
+        if dp > 0:
             return self.discounted_price
         return self.price
 

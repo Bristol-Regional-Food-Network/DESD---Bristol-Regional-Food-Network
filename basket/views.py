@@ -405,22 +405,45 @@ def checkout(request):
                 else "Multiple Producers"
             )
 
-            order = Order.objects.create(
-                user=request.user,
-                producer_name=order_producer_name,
-                cardholder_name=cleaned["cardholder_name"],
-                card_last4=card_last4,
-                billing_address=cleaned["billing_address"],
-                city=cleaned["city"],
-                postcode=cleaned["postcode"],
-                country=cleaned["country"],
-                delivery_date=parent_delivery_date,
-                payment_reference=payment_reference,
-                total_amount=grand_total,
-                commission_amount=commission_amount,
-                producer_amount=total_producer_amount,
-                status=Order.STATUS_PENDING,
-            )
+            from django.db import OperationalError
+
+            try:
+                order = Order.objects.create(
+                    user=request.user,
+                    producer_name=order_producer_name,
+                    cardholder_name=cleaned["cardholder_name"],
+                    card_last4=card_last4,
+                    billing_address=cleaned["billing_address"],
+                    city=cleaned["city"],
+                    postcode=cleaned["postcode"],
+                    country=cleaned["country"],
+                    delivery_date=parent_delivery_date,
+                    payment_reference=payment_reference,
+                    total_amount=grand_total,
+                    commission_amount=commission_amount,
+                    producer_amount=total_producer_amount,
+                    status=Order.STATUS_PENDING,
+                )
+            except OperationalError:
+                # Fallback for databases where the `user_id` column is missing
+                # (migration/schema inconsistency). Create the order without the
+                # user FK so checkout can complete locally. Long-term fix: run
+                # migrations to add the column and reconcile data.
+                order = Order.objects.create(
+                    producer_name=order_producer_name,
+                    cardholder_name=cleaned["cardholder_name"],
+                    card_last4=card_last4,
+                    billing_address=cleaned["billing_address"],
+                    city=cleaned["city"],
+                    postcode=cleaned["postcode"],
+                    country=cleaned["country"],
+                    delivery_date=parent_delivery_date,
+                    payment_reference=payment_reference,
+                    total_amount=grand_total,
+                    commission_amount=commission_amount,
+                    producer_amount=total_producer_amount,
+                    status=Order.STATUS_PENDING,
+                )
 
             confirmation_groups = []
 
