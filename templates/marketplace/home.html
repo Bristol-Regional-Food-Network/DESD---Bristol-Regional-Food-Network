@@ -24,7 +24,7 @@
 
     {# Customer shortcut #}
     {% if user.userprofile.can_access_customer %}
-      <a class="btn btn-primary" href="{% url 'customer_dashboard' %}">
+      <a class="btn btn-primary" href="{% url 'products:product_list' %}">
         Customer Dashboard
       </a>
     {% endif %}
@@ -95,7 +95,7 @@
       </p>
       {% if user.is_authenticated %}
       {% if user.userprofile.can_access_customer %}
-        <a class="btn btn-primary" href="{% url 'customer_dashboard' %}">
+        <a class="btn btn-primary" href="{% url 'products:product_list' %}">
           Go to Dashboard
         </a>
       {% else %}

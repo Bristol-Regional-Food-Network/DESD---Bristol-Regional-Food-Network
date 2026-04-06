@@ -131,6 +131,7 @@ def _product_to_dict(product: Product):
         "description": product.description,
         "price": str(product.price),
         "stock": product.stock,
+        "is_organic": product.is_organic,
         "section": product.section,
         "category": product.category,
         "category_display": product.get_category_display(),
@@ -233,6 +234,7 @@ def _visible_products_queryset():
 
 def product_list(request):
     selected_category = request.GET.get("category", "all")
+    selected_organic = request.GET.get("organic", "all")
     q = request.GET.get("q", "").strip()
 
     visible_products = _visible_products_queryset()
@@ -251,6 +253,11 @@ def product_list(request):
 
     if selected_category != "all":
         visible_products = [p for p in visible_products if p.category == selected_category]
+
+    if selected_organic == "certified":
+        visible_products = [p for p in visible_products if p.is_organic]
+    elif selected_organic == "not_certified":
+        visible_products = [p for p in visible_products if not p.is_organic]
 
     surplus_products = [p for p in visible_products if p.is_surplus_active]
     seasonal_products = [
@@ -276,6 +283,24 @@ def product_list(request):
         (Product.CATEGORY_SEASONAL_SPECIALITIES, "Seasonal Specialities"),
     ]
 
+    organic_options = [
+        ("all", "All Products"),
+        ("certified", "Certified Organic"),
+        ("not_certified", "Not Certified"),
+    ]
+
+    saved = request.session.get("saved_products", {})
+    saved_items = []
+
+    for product_id, item in saved.items():
+        saved_items.append({
+            "product_id": product_id,
+            "name": item.get("name", ""),
+            "price": item.get("price", 0),
+            "description": item.get("description", ""),
+            "producer": item.get("producer", ""),
+        })
+
     return render(
         request,
         "products/product_list.html",
@@ -285,8 +310,11 @@ def product_list(request):
             "discounted_products": discounted_products,
             "all_products": all_products,
             "categories": categories,
+            "organic_options": organic_options,
             "selected_category": selected_category,
+            "selected_organic": selected_organic,
             "query": q,
+            "saved_items": saved_items,
         },
     )
 
@@ -358,7 +386,14 @@ def add_product(request):
     else:
         form = ProductForm()
 
-    return render(request, "products/add_product.html", {"form": form, "page_title": "Add Product"})
+    return render(
+        request,
+        "products/add_product.html",
+        {
+            "form": form,
+            "page_title": "Add Product",
+        },
+    )
 
 
 @login_required
@@ -432,6 +467,7 @@ def api_product_collection(request: HttpRequest):
         q = request.GET.get("q")
         category = request.GET.get("category")
         visible_only = request.GET.get("visible_only")
+        organic = request.GET.get("organic")
 
         if producer_id:
             products = products.filter(producer_id=producer_id)
@@ -444,6 +480,10 @@ def api_product_collection(request: HttpRequest):
             ).distinct()
         if category:
             products = products.filter(category=category)
+        if organic == "true":
+            products = products.filter(is_organic=True)
+        elif organic == "false":
+            products = products.filter(is_organic=False)
 
         product_list_result = list(products)
         if visible_only == "true":
@@ -512,6 +552,7 @@ def api_product_collection(request: HttpRequest):
         description=str(payload.get("description", "")).strip(),
         price=price,
         stock=stock,
+        is_organic=bool(payload.get("is_organic", False)),
         section=section,
         category=category_value,
         discount_percent=discount_percent,
@@ -586,6 +627,9 @@ def api_product_resource(request: HttpRequest, product_id: int):
         category_value = str(payload["category"]).strip()
         if category_value in {choice[0] for choice in Product.CATEGORY_CHOICES}:
             product.category = category_value
+
+    if "is_organic" in payload:
+        product.is_organic = bool(payload["is_organic"])
 
     if "discount_percent" in payload:
         try:

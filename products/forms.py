@@ -26,10 +26,11 @@ class ProductForm(forms.ModelForm):
             "season_start_month",
             "season_end_month",
             "best_before_date",
+            "is_organic",
             "is_surplus",
             "surplus_discount_percent",
             "surplus_note",
-        ]
+]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
             "name": forms.TextInput(attrs={"class": "form-control"}),
@@ -44,6 +45,7 @@ class ProductForm(forms.ModelForm):
             "season_start_month": forms.Select(attrs={"class": "form-select"}),
             "season_end_month": forms.Select(attrs={"class": "form-select"}),
             "best_before_date": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "is_organic": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "is_surplus": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "surplus_discount_percent": forms.NumberInput(attrs={"class": "form-control", "min": "10", "max": "50"}),
             "surplus_note": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
