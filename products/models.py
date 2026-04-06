@@ -2,6 +2,9 @@ from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 from producers.models import Producer
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db.models import Avg
 
 
 class Product(models.Model):
@@ -139,7 +142,6 @@ class Product(models.Model):
 
     @property
     def discounted_price(self):
-        # defensive: discount_percent may be stored as a string in a mismatched DB
         try:
             dp = int(self.discount_percent or 0)
         except Exception:
@@ -188,7 +190,6 @@ class Product(models.Model):
 
     @property
     def active_price(self):
-        # defensive: coerce surplus_discount_percent and discount_percent to ints
         try:
             sdp = int(self.surplus_discount_percent or 0)
         except Exception:
@@ -285,3 +286,59 @@ class Product(models.Model):
     @property
     def price_display(self):
         return f"£{self.price} per {self.unit_display}"
+
+    @property
+    def average_rating(self):
+        result = self.reviews.filter(is_approved=True).aggregate(avg=Avg("rating"))
+        return result["avg"] or 0
+
+    @property
+    def review_count(self):
+        return self.reviews.filter(is_approved=True).count()
+
+
+class Review(models.Model):
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="reviews"
+    )
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="product_reviews"
+    )
+    order = models.ForeignKey(
+        "basket.Order",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="reviews"
+    )
+
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)]
+    )
+    title = models.CharField(max_length=120)
+    review_text = models.TextField()
+    is_anonymous = models.BooleanField(default=False)
+    is_verified_purchase = models.BooleanField(default=True)
+
+    is_approved = models.BooleanField(default=True)
+    producer_reply = models.TextField(blank=True)
+    producer_replied_at = models.DateTimeField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "customer"],
+                name="unique_review_per_customer_per_product"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.product.name} - {self.customer.username} ({self.rating}/5)"

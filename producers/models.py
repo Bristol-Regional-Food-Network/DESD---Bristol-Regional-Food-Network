@@ -8,6 +8,10 @@ class Producer(models.Model):
     bio = models.TextField(blank=True)
     location = models.CharField(max_length=120, blank=True)
     postcode = models.CharField(max_length=12, blank=True)
+
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+
     phone = models.CharField(max_length=30, blank=True)
     website = models.URLField(blank=True)
 

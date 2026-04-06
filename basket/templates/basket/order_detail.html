@@ -38,7 +38,16 @@
                         <tbody>
                             {% for item in order.items.all %}
                                 <tr>
-                                    <td>{{ item.product_name }}</td>
+                                    <td>
+                                        {{ item.product_name }}
+                                        {% if item.product and order.status == 'fulfilled' %}
+                                            <div class="mt-2">
+                                                <a href="{% url 'products:product_detail' item.product.id %}" class="btn btn-sm btn-outline-primary">
+                                                    Write Review
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    </td>
                                     <td>{{ item.producer_name }}</td>
                                     <td>{{ item.quantity }}</td>
                                     <td>£{{ item.price|floatformat:2 }}</td>

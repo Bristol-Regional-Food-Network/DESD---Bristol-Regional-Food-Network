@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Product
+from .models import Product, Review
 
 
 @admin.register(Product)
@@ -7,33 +7,42 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = (
         "name",
         "producer",
-        "price",
-        "unit_value",
-        "unit",
-        "stock",
         "category",
-        "section",
-        "discount_percent",
+        "price",
+        "stock",
         "availability_mode",
-        "is_surplus",
-        "surplus_discount_percent",
-        "surplus_expires_at",
         "is_organic",
+        "is_surplus",
     )
     list_filter = (
         "category",
-        "section",
-        "unit",
         "availability_mode",
-        "is_surplus",
-        "producer",
         "is_organic",
+        "is_surplus",
+        "section",
+    )
+    search_fields = ("name", "description", "producer__display_name")
+
+
+@admin.register(Review)
+class ReviewAdmin(admin.ModelAdmin):
+    list_display = (
+        "product",
+        "customer",
+        "rating",
+        "is_verified_purchase",
+        "is_approved",
+        "created_at",
+    )
+    list_filter = (
+        "rating",
+        "is_verified_purchase",
+        "is_approved",
+        "created_at",
     )
     search_fields = (
-        "name",
-        "description",
-        "producer__farm_name",
-        "producer__display_name",
-        "surplus_note",
+        "product__name",
+        "customer__username",
+        "title",
+        "review_text",
     )
-    ordering = ("name",)

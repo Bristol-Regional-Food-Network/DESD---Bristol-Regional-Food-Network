@@ -18,43 +18,11 @@ from .models import Order, OrderItem, ProducerOrder
 COMMISSION_RATE = Decimal("0.05")
 PRODUCER_RATE = Decimal("0.95")
 
-POSTCODE_COORDS = {
+
+POSTCODE_LOOKUP = {
     "BS1": (51.4545, -2.5879),
     "BS2": (51.4590, -2.5850),
     "BS3": (51.4416, -2.6010),
-    "BS4": (51.4340, -2.5610),
-    "BS5": (51.4620, -2.5480),
-    "BS6": (51.4700, -2.6100),
-    "BS7": (51.4860, -2.5910),
-    "BS8": (51.4580, -2.6200),
-    "BS9": (51.4850, -2.6310),
-    "BS10": (51.5050, -2.6210),
-    "BS11": (51.4950, -2.6750),
-    "BS13": (51.4120, -2.6110),
-    "BS14": (51.4140, -2.5590),
-    "BS15": (51.4570, -2.5050),
-    "BS16": (51.4860, -2.5110),
-    "BS20": (51.4790, -2.7640),
-    "BS21": (51.4380, -2.8500),
-    "BS22": (51.3590, -2.9280),
-    "BS23": (51.3460, -2.9770),
-    "BS24": (51.3270, -2.9310),
-    "BS30": (51.4460, -2.4720),
-    "BS31": (51.4070, -2.4950),
-    "BS32": (51.5430, -2.5620),
-    "BS34": (51.5250, -2.5640),
-    "BS35": (51.6040, -2.5470),
-    "BS36": (51.5260, -2.4860),
-    "BS37": (51.5400, -2.4180),
-    "BS39": (51.3280, -2.4980),
-    "BS40": (51.3810, -2.6900),
-    "BS41": (51.4300, -2.6520),
-    "BS48": (51.4260, -2.7480),
-    "BS49": (51.3820, -2.8170),
-    "BA1": (51.3870, -2.3590),
-    "BA2": (51.3590, -2.3880),
-    "GL12": (51.6200, -2.3800),
-    "SN14": (51.5100, -2.1900),
 }
 
 
@@ -66,52 +34,47 @@ def _money(value):
     return Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def _normalise_postcode(postcode):
+def _postcode_area(postcode):
     if not postcode:
         return ""
-    return re.sub(r"\s+", "", str(postcode).upper())
-
-
-def _postcode_area(postcode):
-    cleaned = _normalise_postcode(postcode)
-    match = re.match(r"^[A-Z]{1,2}\d{1,2}[A-Z]?", cleaned)
+    postcode = postcode.replace(" ", "").upper()
+    match = re.match(r"^[A-Z]{1,2}\d{1,2}", postcode)
     return match.group(0) if match else ""
 
 
-def _haversine_miles(lat1, lon1, lat2, lon2):
+def _haversine(lat1, lon1, lat2, lon2):
     radius_miles = 3958.8
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
-    d_phi = math.radians(lat2 - lat1)
-    d_lambda = math.radians(lon2 - lon1)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
 
     a = (
-        math.sin(d_phi / 2) ** 2
-        + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     )
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return radius_miles * c
+    return radius_miles * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
 
 
-def _estimate_food_miles(customer_postcode, producer_postcode):
-    customer_area = _postcode_area(customer_postcode)
-    producer_area = _postcode_area(producer_postcode)
-
-    if not customer_area or not producer_area:
+def _estimate_food_miles(customer_postcode, producer):
+    if not customer_postcode or not producer:
         return None
 
-    customer_coords = POSTCODE_COORDS.get(customer_area)
-    producer_coords = POSTCODE_COORDS.get(producer_area)
+    if producer.latitude is None or producer.longitude is None:
+        return None
 
-    if not customer_coords or not producer_coords:
+    area = _postcode_area(customer_postcode)
+    customer_coords = POSTCODE_LOOKUP.get(area)
+
+    if not customer_coords:
         return None
 
     return round(
-        _haversine_miles(
+        _haversine(
             customer_coords[0],
             customer_coords[1],
-            producer_coords[0],
-            producer_coords[1],
+            producer.latitude,
+            producer.longitude,
         ),
         1,
     )
@@ -146,7 +109,7 @@ def _build_checkout_groups(basket, customer_postcode=""):
         subtotal = _money(current_price * quantity)
         producer_name = getattr(product.producer, "display_name", "Unknown Producer")
         producer_postcode = getattr(product.producer, "postcode", "")
-        food_miles = _estimate_food_miles(customer_postcode, producer_postcode)
+        food_miles = _estimate_food_miles(customer_postcode, product.producer)
 
         if producer_name not in groups:
             groups[producer_name] = {
@@ -398,6 +361,9 @@ def checkout(request):
             card_last4 = cleaned["card_number"][-4:]
             payment_reference = f"TEST-{uuid4().hex[:12].upper()}"
 
+            request.session["customer_postcode"] = cleaned["postcode"]
+            request.session.modified = True
+
             parent_delivery_date = min(producer_delivery_dates.values()) if producer_delivery_dates else min_delivery_date
             order_producer_name = (
                 producer_groups[0]["producer_name"]
@@ -425,10 +391,6 @@ def checkout(request):
                     status=Order.STATUS_PENDING,
                 )
             except OperationalError:
-                # Fallback for databases where the `user_id` column is missing
-                # (migration/schema inconsistency). Create the order without the
-                # user FK so checkout can complete locally. Long-term fix: run
-                # migrations to add the column and reconcile data.
                 order = Order.objects.create(
                     producer_name=order_producer_name,
                     cardholder_name=cleaned["cardholder_name"],

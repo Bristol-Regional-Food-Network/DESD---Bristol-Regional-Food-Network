@@ -1,5 +1,5 @@
 from django import forms
-from .models import Product
+from .models import Product, Review
 
 
 class ProductForm(forms.ModelForm):
@@ -30,7 +30,7 @@ class ProductForm(forms.ModelForm):
             "is_surplus",
             "surplus_discount_percent",
             "surplus_note",
-]
+        ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
             "name": forms.TextInput(attrs={"class": "form-control"}),
@@ -98,3 +98,34 @@ class ProductForm(forms.ModelForm):
             cleaned_data["surplus_note"] = ""
 
         return cleaned_data
+
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = Review
+        fields = ["rating", "title", "review_text", "is_anonymous"]
+        widgets = {
+            "rating": forms.NumberInput(attrs={
+                "class": "form-control",
+                "min": "1",
+                "max": "5"
+            }),
+            "title": forms.TextInput(attrs={
+                "class": "form-control",
+                "placeholder": "Review title"
+            }),
+            "review_text": forms.Textarea(attrs={
+                "class": "form-control",
+                "rows": 4,
+                "placeholder": "Write your review"
+            }),
+            "is_anonymous": forms.CheckboxInput(attrs={
+                "class": "form-check-input"
+            }),
+        }
+
+    def clean_rating(self):
+        rating = self.cleaned_data.get("rating")
+        if rating < 1 or rating > 5:
+            raise forms.ValidationError("Rating must be between 1 and 5.")
+        return rating

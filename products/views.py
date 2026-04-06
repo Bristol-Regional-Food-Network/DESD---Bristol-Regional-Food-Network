@@ -6,7 +6,7 @@ import re
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Avg
 from django.http import HttpRequest, HttpResponseNotAllowed, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -14,48 +14,16 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from users.decorators import role_required
-from .forms import ProductForm
-from .models import Product
+from .forms import ProductForm, ReviewForm
+from .models import Product, Review
 from producers.models import Producer
+from basket.models import Order, OrderItem
 
 
-POSTCODE_COORDS = {
+POSTCODE_LOOKUP = {
     "BS1": (51.4545, -2.5879),
     "BS2": (51.4590, -2.5850),
     "BS3": (51.4416, -2.6010),
-    "BS4": (51.4340, -2.5610),
-    "BS5": (51.4620, -2.5480),
-    "BS6": (51.4700, -2.6100),
-    "BS7": (51.4860, -2.5910),
-    "BS8": (51.4580, -2.6200),
-    "BS9": (51.4850, -2.6310),
-    "BS10": (51.5050, -2.6210),
-    "BS11": (51.4950, -2.6750),
-    "BS13": (51.4120, -2.6110),
-    "BS14": (51.4140, -2.5590),
-    "BS15": (51.4570, -2.5050),
-    "BS16": (51.4860, -2.5110),
-    "BS20": (51.4790, -2.7640),
-    "BS21": (51.4380, -2.8500),
-    "BS22": (51.3590, -2.9280),
-    "BS23": (51.3460, -2.9770),
-    "BS24": (51.3270, -2.9310),
-    "BS30": (51.4460, -2.4720),
-    "BS31": (51.4070, -2.4950),
-    "BS32": (51.5430, -2.5620),
-    "BS34": (51.5250, -2.5640),
-    "BS35": (51.6040, -2.5470),
-    "BS36": (51.5260, -2.4860),
-    "BS37": (51.5400, -2.4180),
-    "BS39": (51.3280, -2.4980),
-    "BS40": (51.3810, -2.6900),
-    "BS41": (51.4300, -2.6520),
-    "BS48": (51.4260, -2.7480),
-    "BS49": (51.3820, -2.8170),
-    "BA1": (51.3870, -2.3590),
-    "BA2": (51.3590, -2.3880),
-    "GL12": (51.6200, -2.3800),
-    "SN14": (51.5100, -2.1900),
 }
 
 
@@ -75,53 +43,50 @@ def _parse_json(request: HttpRequest):
         return None
 
 
-def _normalise_postcode(postcode):
+def _postcode_area(postcode):
     if not postcode:
         return ""
-    return re.sub(r"\s+", "", str(postcode).upper())
-
-
-def _postcode_area(postcode):
-    cleaned = _normalise_postcode(postcode)
-    match = re.match(r"^[A-Z]{1,2}\d{1,2}[A-Z]?", cleaned)
+    postcode = postcode.replace(" ", "").upper()
+    match = re.match(r"^[A-Z]{1,2}\d{1,2}", postcode)
     return match.group(0) if match else ""
 
 
-def _haversine_miles(lat1, lon1, lat2, lon2):
+def _haversine(lat1, lon1, lat2, lon2):
     radius_miles = 3958.8
     phi1 = math.radians(lat1)
     phi2 = math.radians(lat2)
-    d_phi = math.radians(lat2 - lat1)
-    d_lambda = math.radians(lon2 - lon1)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
 
     a = (
-        math.sin(d_phi / 2) ** 2
-        + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     )
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return radius_miles * c
+    return radius_miles * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
 
 
-def _estimate_food_miles(customer_postcode, producer_postcode):
-    customer_area = _postcode_area(customer_postcode)
-    producer_area = _postcode_area(producer_postcode)
-
-    if not customer_area or not producer_area:
+def _estimate_food_miles(customer_postcode, producer):
+    if not customer_postcode or not producer:
         return None
 
-    customer_coords = POSTCODE_COORDS.get(customer_area)
-    producer_coords = POSTCODE_COORDS.get(producer_area)
-
-    if not customer_coords or not producer_coords:
+    if getattr(producer, "latitude", None) is None or getattr(producer, "longitude", None) is None:
         return None
 
-    miles = _haversine_miles(
-        customer_coords[0],
-        customer_coords[1],
-        producer_coords[0],
-        producer_coords[1],
+    area = _postcode_area(customer_postcode)
+    customer_coords = POSTCODE_LOOKUP.get(area)
+
+    if not customer_coords:
+        return None
+
+    return round(
+        _haversine(
+            customer_coords[0],
+            customer_coords[1],
+            producer.latitude,
+            producer.longitude,
+        ),
+        1,
     )
-    return round(miles, 1)
 
 
 def _product_to_dict(product: Product):
@@ -319,6 +284,18 @@ def product_list(request):
     )
 
 
+def _get_reviewable_order_for_product(user, product):
+    return (
+        Order.objects.filter(
+            user=user,
+            status=Order.STATUS_FULFILLED,
+            items__product=product,
+        )
+        .order_by("-created_at")
+        .first()
+    )
+
+
 def product_detail(request, product_id):
     product = get_object_or_404(Product.objects.select_related("producer"), id=product_id)
 
@@ -339,7 +316,22 @@ def product_detail(request, product_id):
 
     customer_postcode = request.session.get("customer_postcode", "")
     producer_postcode = getattr(product.producer, "postcode", "")
-    food_miles = _estimate_food_miles(customer_postcode, producer_postcode)
+    food_miles = _estimate_food_miles(customer_postcode, product.producer)
+    within_radius = food_miles is not None and food_miles <= 20
+
+    reviews = product.reviews.filter(is_approved=True).select_related("customer")
+    average_rating = reviews.aggregate(avg=Avg("rating"))["avg"] or 0
+
+    can_review = False
+    existing_review = None
+    review_form = None
+
+    if request.user.is_authenticated:
+        existing_review = Review.objects.filter(product=product, customer=request.user).first()
+        reviewable_order = _get_reviewable_order_for_product(request.user, product)
+        can_review = reviewable_order is not None and existing_review is None
+        if can_review:
+            review_form = ReviewForm()
 
     return render(
         request,
@@ -347,7 +339,14 @@ def product_detail(request, product_id):
         {
             "product": product,
             "customer_postcode": customer_postcode,
+            "producer_postcode": producer_postcode,
             "food_miles": food_miles,
+            "within_radius": within_radius,
+            "reviews": reviews,
+            "average_rating": average_rating,
+            "can_review": can_review,
+            "existing_review": existing_review,
+            "review_form": review_form,
         },
     )
 
@@ -394,6 +393,42 @@ def add_product(request):
             "page_title": "Add Product",
         },
     )
+
+
+@login_required
+@require_http_methods(["POST"])
+def submit_review(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    existing_review = Review.objects.filter(
+        product=product,
+        customer=request.user
+    ).first()
+
+    if existing_review:
+        messages.error(request, "You have already reviewed this product.")
+        return redirect("products:product_detail", product_id=product.id)
+
+    reviewable_order = _get_reviewable_order_for_product(request.user, product)
+
+    if not reviewable_order:
+        messages.error(request, "You can only review products from fulfilled orders.")
+        return redirect("products:product_detail", product_id=product.id)
+
+    form = ReviewForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "Please correct the review form and try again.")
+        return redirect("products:product_detail", product_id=product.id)
+
+    review = form.save(commit=False)
+    review.product = product
+    review.customer = request.user
+    review.order = reviewable_order
+    review.is_verified_purchase = True
+    review.save()
+
+    messages.success(request, "Your review has been submitted successfully.")
+    return redirect("products:product_detail", product_id=product.id)
 
 
 @login_required

@@ -108,7 +108,7 @@
             <h2 class="h6 mb-3">Food Miles</h2>
 
             <form method="get" class="mb-3">
-              <label for="postcode" class="form-label">Your postcode</label>
+              <label for="postcode" class="form-label">Delivery postcode</label>
               <div class="d-flex gap-2">
                 <input
                   type="text"
@@ -116,20 +116,37 @@
                   name="postcode"
                   class="form-control"
                   value="{{ customer_postcode }}"
-                  placeholder="e.g. BS1 4DJ"
+                  placeholder="e.g. BS1 5JG"
                 >
                 <button type="submit" class="btn btn-outline-dark">Update</button>
               </div>
             </form>
 
+            {% if producer_postcode %}
+              <p class="mb-2">
+                <strong>Producer postcode:</strong> {{ producer_postcode }}
+              </p>
+            {% else %}
+              <p class="mb-2 text-muted">
+                <strong>Producer postcode:</strong> Not available
+              </p>
+            {% endif %}
+
             {% if food_miles is not None %}
-              <div class="fw-semibold">Estimated food miles: {{ food_miles }} miles</div>
-              <div class="text-muted small mt-1">
-                Calculated from your postcode to the producer postcode.
+              <div class="fw-semibold mb-2">Estimated food miles: {{ food_miles }} miles</div>
+
+              {% if within_radius %}
+                <span class="badge bg-success">Within 20-mile radius</span>
+              {% else %}
+                <span class="badge bg-danger">Outside 20-mile radius</span>
+              {% endif %}
+
+              <div class="text-muted small mt-2">
+                Calculated from your delivery postcode to the producer location.
               </div>
             {% else %}
               <div class="text-muted small">
-                Enter your postcode to estimate the distance from this producer.
+                Enter your delivery postcode to estimate the distance from this producer.
               </div>
             {% endif %}
           </div>
@@ -188,6 +205,94 @@
           This product is currently not available to order.
         </div>
       {% endif %}
+
+      <div class="card shadow-sm mt-4">
+        <div class="card-body">
+          <h2 class="h4 mb-3">Customer Reviews</h2>
+
+          <p class="mb-3">
+            <strong>Average rating:</strong>
+            {{ average_rating|floatformat:1 }}/5
+            <span class="text-muted">({{ reviews|length }} review{{ reviews|length|pluralize }})</span>
+          </p>
+
+          {% if can_review %}
+            <div class="border rounded p-3 mb-4 bg-light">
+              <h3 class="h6">Write a Review</h3>
+              <form method="post" action="{% url 'products:submit_review' product.id %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label class="form-label">Star Rating (1-5)</label>
+                  {{ review_form.rating }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Review Title</label>
+                  {{ review_form.title }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Review Text</label>
+                  {{ review_form.review_text }}
+                </div>
+                <div class="form-check mb-3">
+                  {{ review_form.is_anonymous }}
+                  <label class="form-check-label" for="{{ review_form.is_anonymous.id_for_label }}">
+                    Post anonymously
+                  </label>
+                </div>
+                <button type="submit" class="btn btn-dark">Submit Review</button>
+              </form>
+            </div>
+          {% elif existing_review %}
+            <div class="alert alert-info">
+              You have already reviewed this product.
+            </div>
+          {% elif request.user.is_authenticated %}
+            <div class="alert alert-warning">
+              You can only review this product after it has been fulfilled/delivered in one of your orders.
+            </div>
+          {% else %}
+            <div class="alert alert-secondary">
+              Please log in to leave a review.
+            </div>
+          {% endif %}
+
+          {% if reviews %}
+            {% for review in reviews %}
+              <div class="border rounded p-3 mb-3">
+                <div class="d-flex justify-content-between flex-wrap gap-2">
+                  <div>
+                    <strong>
+                      {% if review.is_anonymous %}
+                        Anonymous
+                      {% else %}
+                        {{ review.customer.username }}
+                      {% endif %}
+                    </strong>
+                    <span class="badge bg-success ms-2">Verified Purchase</span>
+                  </div>
+                  <small class="text-muted">{{ review.created_at|date:"d M Y" }}</small>
+                </div>
+
+                <div class="mt-2">
+                  <strong>{{ review.rating }}/5 stars</strong>
+                </div>
+
+                <h3 class="h6 mt-2 mb-1">{{ review.title }}</h3>
+                <p class="mb-2">{{ review.review_text }}</p>
+
+                {% if review.producer_reply %}
+                  <div class="bg-light border rounded p-2 mt-2">
+                    <strong>Producer reply:</strong>
+                    <p class="mb-0">{{ review.producer_reply }}</p>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted mb-0">No reviews yet for this product.</p>
+          {% endif %}
+        </div>
+      </div>
 
     </div>
   </div>
