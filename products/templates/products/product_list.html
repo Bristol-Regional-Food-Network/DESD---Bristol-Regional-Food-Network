@@ -7,47 +7,234 @@
     <h1 class="mb-2">Marketplace</h1>
     <p class="text-muted mb-4">Browse fresh products from local producers.</p>
 
-    <!-- Search Bar -->
-    <form method="get" class="row g-2 mb-4">
-        <div class="col-md-8">
-            <input
-                type="text"
-                name="q"
-                value="{{ query }}"
-                class="form-control"
-                placeholder="Search by product name, description, or producer..."
-            >
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-dark w-100">Search</button>
-        </div>
-        <div class="col-md-2">
-            <a href="{% url 'products:product_list' %}" class="btn btn-outline-secondary w-100">Clear</a>
-        </div>
+    <!-- Search + Filters -->
+    <form method="get" class="mb-4">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    class="form-control"
+                    placeholder="Search by product name, description, or producer..."
+                >
+            </div>
 
-        {% if selected_category != "all" %}
-            <input type="hidden" name="category" value="{{ selected_category }}">
-        {% endif %}
+            <div class="col-md-3">
+                <select name="category" class="form-select">
+                    {% for value, label in categories %}
+                        <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select name="organic" class="form-select">
+                    {% for value, label in organic_options %}
+                        <option value="{{ value }}" {% if selected_organic == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-dark">
+                    Apply
+                </button>
+            </div>
+
+            <div class="col-auto">
+                <a href="{% url 'products:product_list' %}" class="btn btn-outline-secondary">
+                    Clear
+                </a>
+            </div>
+
+            <div class="col-auto">
+                <a href="{% url 'saved_products' %}" class="btn btn-outline-dark">
+                    Saved Products ({{ saved_items|length }})
+                </a>
+            </div>
+        </div>
     </form>
 
-    <!-- Category Navigation -->
-    <div class="mb-4">
-        <div class="d-flex flex-wrap gap-2">
-            {% for value, label in categories %}
-                <a href="?category={{ value }}{% if query %}&q={{ query|urlencode }}{% endif %}"
-                   class="btn {% if selected_category == value %}btn-dark{% else %}btn-outline-dark{% endif %}">
-                    {{ label }}
-                </a>
-            {% endfor %}
+    {% if saved_items %}
+        <div class="mb-5">
+            <h3 class="mb-3">Saved Products</h3>
+            <div class="row g-3">
+                {% for item in saved_items %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <h5>{{ item.name }}</h5>
+                                <p><strong>Producer:</strong> {{ item.producer }}</p>
+                                <p>{{ item.description|truncatechars:80 }}</p>
+                                <p><strong>£{{ item.price|floatformat:2 }}</strong></p>
+
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'products:product_detail' item.product_id %}" class="btn btn-sm btn-dark">
+                                        View
+                                    </a>
+
+                                    <form method="post" action="{% url 'remove_saved_product' item.product_id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
-    </div>
+    {% endif %}
 
     {% if query %}
         <div class="mb-4">
-            <h4 class="mb-3">Search results for "{{ query }}"</h4>
+            <h4 class="mb-3">Search results{% if query %} for "{{ query }}"{% endif %}</h4>
 
-            {% if all_products %}
+            {% if all_products or surplus_products or seasonal_products or discounted_products %}
                 <div class="row g-3">
+                    {% for product in surplus_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4 border-warning">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                        <span class="badge bg-warning text-dark">{{ product.surplus_discount_percent }}% OFF</span>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if product.surplus_note %}
+                                        <p class="small text-muted mb-1">{{ product.surplus_note }}</p>
+                                    {% endif %}
+
+                                    {% if product.best_before_date %}
+                                        <p class="small text-danger mb-1"><strong>Best before:</strong> {{ product.best_before_date }}</p>
+                                    {% endif %}
+
+                                    <p class="small text-danger mb-2"><strong>{{ product.surplus_time_remaining }}</strong></p>
+
+                                    <p class="mb-3">
+                                        <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
+                                        <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
+                                    </p>
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-warning">
+                                            View Deal
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                    {% for product in seasonal_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4">
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                        <span class="badge bg-success">£{{ product.active_price|floatformat:2 }}</span>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if product.season_range_display %}
+                                        <p class="small text-muted mb-2">
+                                            Available: {{ product.season_range_display }}
+                                        </p>
+                                    {% endif %}
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                    {% for product in discounted_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4 position-relative">
+                                {% if product.discount_percent > 0 %}
+                                    <span class="badge bg-danger position-absolute top-0 start-0 m-2">
+                                        {{ product.discount_percent }}% OFF
+                                    </span>
+                                {% endif %}
+
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2 mt-3">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <p class="mb-2">
+                                        <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
+                                        <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
+                                    </p>
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-danger">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+
                     {% for product in all_products %}
                         <div class="col-md-6 col-lg-4">
                             <div class="card shadow-sm h-100 rounded-4 {% if product.is_surplus_active %}border-warning{% endif %}">
@@ -68,46 +255,21 @@
                                         {{ product.description|default:"No description available."|truncatechars:100 }}
                                     </p>
 
-                                    <p class="small mb-1">
-                                        <strong>Producer:</strong> {{ product.producer.display_name }}
-                                    </p>
-
-                                    <p class="small mb-1">
-                                        <strong>Category:</strong> {{ product.get_category_display }}
-                                    </p>
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
 
                                     <div class="mb-2">
-                                        {% if product.customer_status == "In Season" %}
-                                            <span class="badge bg-success">In Season</span>
-                                        {% elif product.customer_status == "Available Year-Round" %}
-                                            <span class="badge bg-primary">Available Year-Round</span>
-                                        {% elif product.customer_status == "Out of Season" %}
-                                            <span class="badge bg-secondary">Out of Season</span>
-                                        {% elif product.customer_status == "Out of Stock" %}
-                                            <span class="badge bg-dark">Out of Stock</span>
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">{{ product.customer_status }}</span>
+                                            <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
-
-                                    {% if product.season_range_display %}
-                                        <p class="small text-muted mb-2">
-                                            Available: {{ product.season_range_display }}
-                                        </p>
-                                    {% endif %}
 
                                     {% if product.best_before_date %}
                                         <p class="small text-danger mb-1">
                                             <strong>Best before:</strong> {{ product.best_before_date }}
                                         </p>
-                                    {% endif %}
-
-                                    {% if product.surplus_note %}
-                                        <p class="small text-muted mb-1">{{ product.surplus_note }}</p>
-                                    {% endif %}
-
-                                    {% if product.is_surplus_active %}
-                                        <p class="small text-danger mb-2"><strong>{{ product.surplus_time_remaining }}</strong></p>
                                     {% endif %}
 
                                     <p class="mb-2">
@@ -131,7 +293,11 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="text-muted">No results found.</p>
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic products found for your current search/filter.</p>
+                {% else %}
+                    <p class="text-muted">No results found.</p>
+                {% endif %}
             {% endif %}
         </div>
     {% else %}
@@ -157,10 +323,15 @@
                                     </p>
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
 
-                                    <p class="small mb-1">
-                                        <strong>Category:</strong> {{ product.get_category_display }}
-                                    </p>
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
 
                                     {% if product.surplus_note %}
                                         <p class="small text-muted mb-1">{{ product.surplus_note }}</p>
@@ -189,7 +360,11 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="text-muted">No surplus deals available right now.</p>
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic products found in surplus deals.</p>
+                {% else %}
+                    <p class="text-muted">No surplus deals available right now.</p>
+                {% endif %}
             {% endif %}
         </div>
 
@@ -214,21 +389,14 @@
                                         {{ product.description|default:"No description available."|truncatechars:100 }}
                                     </p>
 
-                                    <p class="small mb-1">
-                                        <strong>Producer:</strong> {{ product.producer.display_name }}
-                                    </p>
-
-                                    <p class="small mb-1">
-                                        <strong>Category:</strong> {{ product.get_category_display }}
-                                    </p>
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
 
                                     <div class="mb-2">
-                                        {% if product.customer_status == "In Season" %}
-                                            <span class="badge bg-success">In Season</span>
-                                        {% elif product.customer_status == "Available Year-Round" %}
-                                            <span class="badge bg-primary">Available Year-Round</span>
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">{{ product.customer_status }}</span>
+                                            <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
 
@@ -240,9 +408,15 @@
 
                                     <div class="mt-auto d-flex justify-content-between align-items-center">
                                         <small class="text-muted">Stock: {{ product.stock }}</small>
-                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-success">
-                                            View
-                                        </a>
+
+                                        <div class="d-flex gap-2">
+                                            <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
+                                                View
+                                            </a>
+                                            <a href="{% url 'save_product' product.id %}" class="btn btn-sm btn-outline-secondary">
+                                                Save
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -250,7 +424,11 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="text-muted">No seasonal items available.</p>
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic seasonal items available.</p>
+                {% else %}
+                    <p class="text-muted">No seasonal items available.</p>
+                {% endif %}
             {% endif %}
         </div>
 
@@ -280,29 +458,16 @@
                                         {{ product.description|default:"No description available."|truncatechars:100 }}
                                     </p>
 
-                                    <p class="small mb-1">
-                                        <strong>Producer:</strong> {{ product.producer.display_name }}
-                                    </p>
-
-                                    <p class="small mb-1">
-                                        <strong>Category:</strong> {{ product.get_category_display }}
-                                    </p>
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
 
                                     <div class="mb-2">
-                                        {% if product.customer_status == "In Season" %}
-                                            <span class="badge bg-success">In Season</span>
-                                        {% elif product.customer_status == "Available Year-Round" %}
-                                            <span class="badge bg-primary">Available Year-Round</span>
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
                                         {% else %}
-                                            <span class="badge bg-secondary">{{ product.customer_status }}</span>
+                                            <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
-
-                                    {% if product.season_range_display %}
-                                        <p class="small text-muted mb-2">
-                                            Available: {{ product.season_range_display }}
-                                        </p>
-                                    {% endif %}
 
                                     <p class="mb-2">
                                         <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
@@ -321,7 +486,11 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="text-muted">No discounted items available.</p>
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic discounted items available.</p>
+                {% else %}
+                    <p class="text-muted">No discounted items available.</p>
+                {% endif %}
             {% endif %}
         </div>
 
@@ -353,13 +522,16 @@
                                         {{ product.description|default:"No description available."|truncatechars:100 }}
                                     </p>
 
-                                    <p class="small mb-1">
-                                        <strong>Producer:</strong> {{ product.producer.display_name }}
-                                    </p>
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
 
-                                    <p class="small mb-1">
-                                        <strong>Category:</strong> {{ product.get_category_display }}
-                                    </p>
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
 
                                     <div class="mb-2">
                                         {% if product.customer_status == "In Season" %}
@@ -410,7 +582,11 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p class="text-muted">No regular items available.</p>
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic products found in this category.</p>
+                {% else %}
+                    <p class="text-muted">No regular items available.</p>
+                {% endif %}
             {% endif %}
         </div>
     {% endif %}

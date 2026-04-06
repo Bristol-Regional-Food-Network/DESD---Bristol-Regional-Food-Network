@@ -30,8 +30,6 @@ class Order(models.Model):
         related_name="orders"
     )
 
-    # For single-producer orders this can hold the producer name.
-    # For multi-producer orders use "Multiple Producers".
     producer_name = models.CharField(max_length=120, blank=True)
 
     cardholder_name = models.CharField(max_length=100)
@@ -42,7 +40,6 @@ class Order(models.Model):
     postcode = models.CharField(max_length=20)
     country = models.CharField(max_length=100, default="UK")
 
-    # Parent order stores an overall/earliest delivery date.
     delivery_date = models.DateField()
     payment_reference = models.CharField(max_length=50, blank=True, default="")
 
@@ -52,7 +49,6 @@ class Order(models.Model):
         decimal_places=2,
         default=Decimal("0.00")
     )
-    # Total producer payout across all producer sub-orders.
     producer_amount = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -116,7 +112,6 @@ class OrderItem(models.Model):
     )
     product = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True, blank=True)
 
-    # Added so producer order/report pages can directly query producer-owned items
     producer = models.ForeignKey(
         Producer,
         on_delete=models.SET_NULL,
@@ -129,8 +124,7 @@ class OrderItem(models.Model):
     producer_name = models.CharField(max_length=120, blank=True)
     unit_display = models.CharField(max_length=50, default="each")
 
-    # Keep Branch A field name for compatibility with current checkout code
-    price = models.DecimalField(max_digits=8, decimal_places=2)
+    price = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     quantity = models.PositiveIntegerField(default=1)
 
     fulfilment_status = models.CharField(
@@ -144,11 +138,16 @@ class OrderItem(models.Model):
 
     @property
     def subtotal(self):
-        return self.price * self.quantity
+        price = self.price if self.price is not None else Decimal("0.00")
+        quantity = self.quantity if self.quantity is not None else 0
+        return price * quantity
 
     @property
     def unit_price(self):
-        return self.price
+        return self.price if self.price is not None else Decimal("0.00")
 
+    @property
     def line_total(self):
-        return self.quantity * self.price
+        price = self.price if self.price is not None else Decimal("0.00")
+        quantity = self.quantity if self.quantity is not None else 0
+        return quantity * price

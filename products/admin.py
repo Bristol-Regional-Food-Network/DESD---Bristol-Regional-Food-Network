@@ -18,6 +18,7 @@ class ProductAdmin(admin.ModelAdmin):
         "is_surplus",
         "surplus_discount_percent",
         "surplus_expires_at",
+        "is_organic",
     )
     list_filter = (
         "category",
@@ -26,6 +27,7 @@ class ProductAdmin(admin.ModelAdmin):
         "availability_mode",
         "is_surplus",
         "producer",
+        "is_organic",
     )
     search_fields = (
         "name",

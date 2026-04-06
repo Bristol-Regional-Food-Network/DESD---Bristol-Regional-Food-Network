@@ -64,6 +64,15 @@
           <div class="mt-3">
             <p class="mb-2"><strong>Status:</strong> {{ product.customer_status }}</p>
 
+            <p class="mb-2">
+              <strong>Organic Certification:</strong>
+              {% if product.is_organic %}
+                <span class="badge bg-success ms-1">Certified Organic</span>
+              {% else %}
+                <span class="badge bg-secondary ms-1">Not Certified</span>
+              {% endif %}
+            </p>
+
             {% if product.season_range_display %}
               <p class="mb-2 text-muted">
                 <strong>Season:</strong> {{ product.season_range_display }}

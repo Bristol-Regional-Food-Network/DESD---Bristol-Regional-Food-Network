@@ -492,3 +492,109 @@ def checkout(request):
         "submitted_delivery_dates": producer_delivery_dates,
         "total_food_miles": total_food_miles,
     })
+
+
+@login_required
+def order_history(request):
+    orders = (
+        Order.objects.filter(user=request.user)
+        .prefetch_related("items__product__producer")
+        .order_by("-created_at")
+    )
+
+    producer_filter = request.GET.get("producer", "").strip().lower()
+    date_filter = request.GET.get("date", "").strip()
+
+    filtered_orders = list(orders)
+
+    if producer_filter:
+        filtered_orders = [
+            order for order in filtered_orders
+            if any(
+                producer_filter in (item.producer_name or "").lower()
+                for item in order.items.all()
+            )
+        ]
+
+    if date_filter:
+        filtered_orders = [
+            order for order in filtered_orders
+            if order.created_at.strftime("%Y-%m-%d") == date_filter
+        ]
+
+    return render(
+        request,
+        "basket/order_history.html",
+        {
+            "orders": filtered_orders,
+            "producer_filter": request.GET.get("producer", ""),
+            "date_filter": date_filter,
+        },
+    )
+
+
+@login_required
+def order_detail(request, order_id):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items__product__producer", "producer_orders"),
+        id=order_id,
+        user=request.user,
+    )
+
+    masked_payment = f"**** **** **** {order.card_last4}" if order.card_last4 else "Not available"
+
+    return render(
+        request,
+        "basket/order_detail.html",
+        {
+            "order": order,
+            "masked_payment": masked_payment,
+        },
+    )
+
+
+@login_required
+def reorder_order(request, order_id):
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items__product__producer"),
+        id=order_id,
+        user=request.user,
+    )
+
+    basket = _get_basket(request.session)
+    unavailable_items = []
+
+    for item in order.items.all():
+        product = item.product
+
+        if not product or not product.is_visible_to_customers or product.stock <= 0:
+            unavailable_items.append(item.product_name)
+            continue
+
+        quantity_to_add = min(item.quantity, product.stock)
+
+        product_id = str(product.id)
+        if product_id in basket:
+            basket[product_id]["quantity"] += quantity_to_add
+            if basket[product_id]["quantity"] > product.stock:
+                basket[product_id]["quantity"] = product.stock
+        else:
+            basket[product_id] = {
+                "name": product.name,
+                "price": float(product.active_price),
+                "quantity": quantity_to_add,
+                "producer": product.producer.display_name,
+                "producer_postcode": getattr(product.producer, "postcode", ""),
+                "unit_display": getattr(product, "unit_display", "each"),
+            }
+
+    request.session.modified = True
+
+    if unavailable_items:
+        messages.warning(
+            request,
+            "Some items were unavailable and were not added: " + ", ".join(unavailable_items)
+        )
+
+    messages.success(request, "Available items from this order were added to your basket.")
+    return redirect("basket:basket_detail")

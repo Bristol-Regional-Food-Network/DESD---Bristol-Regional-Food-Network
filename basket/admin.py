@@ -18,7 +18,7 @@ class OrderItemInline(admin.TabularInline):
     can_delete = False
 
     def subtotal(self, obj):
-        return obj.subtotal
+        return obj.subtotal if obj.pk else 0
     subtotal.short_description = "Subtotal"
 
 
@@ -144,5 +144,5 @@ class OrderItemAdmin(admin.ModelAdmin):
     search_fields = ("product_name", "producer_name", "order__id")
 
     def subtotal(self, obj):
-        return obj.subtotal
+        return obj.subtotal if obj.pk else 0
     subtotal.short_description = "Subtotal"
