@@ -137,6 +137,28 @@ class Product(models.Model):
     surplus_note = models.TextField(blank=True)
     surplus_expires_at = models.DateTimeField(null=True, blank=True)
 
+
+
+    # Image field for AI quality assessment
+    image = models.ImageField(upload_to="products/", null=True, blank=True)
+
+    # AI Quality Assessment Fields
+    ai_predicted_label = models.CharField(max_length=20, blank=True)
+    ai_fresh_probability = models.FloatField(null=True, blank=True)
+    ai_rotten_probability = models.FloatField(null=True, blank=True)
+
+    ai_colour_score = models.FloatField(null=True, blank=True)
+    ai_size_score = models.FloatField(null=True, blank=True)
+    ai_ripeness_score = models.FloatField(null=True, blank=True)
+
+    ai_grade = models.CharField(max_length=2, blank=True)
+    ai_action = models.CharField(max_length=100, blank=True)
+    ai_explanation = models.TextField(blank=True)
+
+    # Timestamp for when AI assessment was last performed
+    ai_last_checked_at = models.DateTimeField(null=True, blank=True)
+
+
     def __str__(self):
         return self.name
 
