@@ -51,3 +51,43 @@ copy .env.example .env
 ├── manage.py
 └── README.md
 ```
+
+---
+
+# Docker Commands
+## Start/Stop
+### Start containers (foreground)
+```bash
+docker compose up
+```
+
+### Start containers (background)
+```bash
+docker compose up -d
+```
+
+### Stop containers (foreground)
+Press CTRL + C
+
+### Stop containers (background)
+```bash
+docker compose down
+```
+
+## Migrations
+### When to run migrations
+- New model created  
+- Field added/removed/changed  
+- New app with models  
+- Foreign key added  
+- Model renamed  
+
+### Make Migrations
+```bash
+docker compose exec web python manage.py makemigrations
+```
+
+### Apply Migrations
+```bash
+docker compose exec web python manage.py migrate
+```
