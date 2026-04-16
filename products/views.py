@@ -408,6 +408,8 @@ def add_product(request):
 
             messages.success(request, "Product added successfully.")
             return redirect("producers:producer_dashboard")
+        else:
+            print("FORM ERRORS:", form.errors)
     else:
         form = ProductForm()
 
