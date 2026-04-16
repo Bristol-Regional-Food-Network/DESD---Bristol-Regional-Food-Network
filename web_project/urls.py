@@ -1,6 +1,8 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
+from django.conf import settings
+from django.conf.urls.static import static
 from users.views import register
 from core.auth_views import post_login_redirect
 from products import views as product_api_views
@@ -35,3 +37,6 @@ urlpatterns = [
     path("api/producers/", producer_api_views.api_producer_collection, name="api_producers_collection"),
     path("api/producers/<int:producer_id>/", producer_api_views.api_producer_resource, name="api_producer_resource"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

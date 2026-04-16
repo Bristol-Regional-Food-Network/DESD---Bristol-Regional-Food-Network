@@ -149,3 +149,194 @@ I created two accounts to show these features
 - test_producer (PASSWORD: test)
 - test_customer (PASSWORD: test)
 These accounts each have different roles and can be used to test/demo how the role-based access works
+
+# Sprint 2 Development Notes (Philip)
+
+## Registration System Improvements
+
+### Extended User Data
+
+Built on the existing registration system by adding additional fields to the UserProfile:
+- Address
+- Postcode
+- Farm Name
+
+Updated the form and view in users/forms.py and users/views.py to correctly save this data to the profile after registration. Initially this data was not saving correctly, this was resolved by ensuring the existing UserProfile was updated using get_or_create instead of creating duplicates.
+
+### Role-Based Field Validation
+
+Added conditional validation to the registration form so that required fields depend on the selected role:
+- Customers and Producers must enter address and postcode
+- Producers must also enter a farm name
+- AI Engineers and Managers do not require these fields
+- This ensures cleaner data and prevents unnecessary inputs.
+
+### Dynamic Registration Form
+
+To improve usability, I implemented JavaScript to dynamically update the registration form based on the selected role.
+- Address and postcode fields are shown for Customers and Producers
+- Farm name is only shown for Producers
+- AI Engineers and Managers do not see additional fields
+
+This prevents users from entering irrelevant data and improves the overall user experience.
+
+## UserProfile & Signals Fixes
+
+Updated the existing signal in users/signals.py to ensure a UserProfile is still automatically created when a user is created. Adjusted the registration logic to work alongside this by using:
+
+```python
+UserProfile.objects.get_or_create(user=user)
+```
+
+This prevents conflicts between manual profile updates and automatic profile creation.
+
+## Role System Improvements
+
+### Manager Role Permissions
+
+Extended the existing role-based access system so that Managers can access all role-restricted pages. Updated the decorator logic to allow:
+- Managers to bypass normal role restrictions
+- Other roles to still be restricted as before
+
+### Helper Methods in UserProfile
+
+Added helper methods to simplify role checks across the project:
+- can_access_customer
+- can_access_producer
+- is_manager
+
+These are used in templates and views instead of repeatedly checking raw role values.
+
+## Homepage Updates
+
+Updated the homepage (home.html) to better reflect role-based functionality:
+- Replaced static text with dynamic dashboard buttons
+- Added:
+    - Customer Dashboard button
+    - Producer Dashboard button
+    - Manager Dashboard button
+
+Managers can now access both Customer and Producer functionality from the homepage.
+
+### UI Improvements
+Improved consistency of buttons across roles:
+- Customer actions use btn-primary (blue)
+- Producer actions use btn-warning (yellow)
+- Manager actions use btn-success (green)
+
+This makes it clearer which actions belong to which role.
+
+### Manager Functionality Setup
+
+Began implementing manager-specific functionality:
+- Added a placeholder "Manager Dashboard" route and template
+- Ensured it integrates with the existing role system
+- Prepared to move this into a dedicated managers app to match the structure of producers and customers
+
+This allows further development without blocking other team members.
+
+# Sprint 3 Development Notes (Philip)
+
+## AI integration into DESD
+
+### Overview 
+
+Integrated the AI-based fruit and vegetable inspection system (from AAI) into the DESD marketplace.
+This allows:
+- producers to upload product images
+- the system to automatically analyse quality
+- results to be displayed directly on the dashboard
+
+This connects the AI system to a real-world web application.
+
+### Flask AI Service Setup
+
+To avoid issues with TensorFlow inside Docker, I created a separate Flask service to handle AI processing.
+- AI runs outside the Django container
+- Flask handles prediction requests
+- Django communicates via HTTP
+
+This prevents:
+- large dependency issues
+- slow Docker builds
+- crashes from TensorFlow
+
+### API Communication
+
+#### Sending Requests to AI
+Implemented a service layer in DESD to send product images to the AI system.
+- image uploaded in Django
+- sent to Flask using POST request
+- uses multipart/form-data
+
+#### Receiving Results
+- The AI returns JSON including:
+- predicted label (fresh / rotten)
+- colour score
+- size score
+- ripeness score
+- grade (A / B / C)
+- recommended action
+- explanation
+
+This is then processed inside Django.
+
+### Product Model Updates
+
+Extended the Product model to store AI results:
+- ai_predicted_label
+- ai_grade
+- ai_action
+- ai_colour_score
+- ai_size_score
+- ai_ripeness_score
+- ai_explanation
+
+This allows AI results to persist in the database.
+
+### Image Upload and AI Run Trigger
+
+Modified product creation/edit flow:
+- user uploads product image
+- image is sent to AI service
+- AI returns results
+- results are saved to the product
+
+This removes the need for manual AI interaction.
+
+### Producer Dashboard Updates
+
+Updated dashboard UI to show AI results inside product cards.
+Added:
+- AI label (fresh / rotten)
+- grade (A / B / C)
+- recommended action
+- quality scores
+- explanation dropdown
+- UI Design
+
+Used existing Bootstrap styling:
+- badges for labels and grades
+- small text for scores
+- collapsible explanation
+
+This keeps UI consistent with the rest of the system.
+
+Logging Integration
+Prediction Logging
+
+### Kept logging functionality from AAI:
+
+every prediction saved to CSV includes:
+- timestamp
+- label
+- scores
+- grade
+- action
+- Purpose
+
+Supports:
+- monitoring system usage
+- identifying incorrect predictions
+- future model retraining
+- admin visibility
