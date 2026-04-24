@@ -14,7 +14,6 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             "name",
-            "image", # Allows image upload and clearing existing image
             "description",
             "price",
             "stock",
@@ -34,7 +33,6 @@ class ProductForm(forms.ModelForm):
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
-            "image": forms.ClearableFileInput(attrs={"class": "form-control"}), # Allows image upload and clearing existing image
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "price": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
             "stock": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),

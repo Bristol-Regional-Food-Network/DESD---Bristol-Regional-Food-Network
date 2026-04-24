@@ -73,6 +73,22 @@
                     </li>
                     {% endif %}
 
+                    {% if user.is_authenticated and user.userprofile.role == "ai_engineer" %}
+<li class="nav-item">
+    <a class="nav-link btn btn-warning text-dark" href="{% url 'ai_engineer_dashboard' %}">
+        AI Engineer
+    </a>
+</li>
+{% endif %}
+
+{% if user.is_authenticated and user.userprofile.role == "customer" %}
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'customer_recommendations' %}">
+        Recommendations
+    </a>
+</li>
+{% endif %}
+
                     <!-- Logout -->
                     <li class="nav-item">
                         <form action="{% url 'logout' %}" method="post" class="d-inline">

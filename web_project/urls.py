@@ -1,12 +1,11 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
-from django.conf import settings
-from django.conf.urls.static import static
 from users.views import register
 from core.auth_views import post_login_redirect
 from products import views as product_api_views
 from producers import views as producer_api_views
+from ai_engineer import views as views_ai
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -30,13 +29,14 @@ urlpatterns = [
     path("customer/", include("customers.urls")),
     path("manager/", include("managers.urls")),
     path("basket/", include("basket.urls")),
+    path("ai-engineer/", include("ai_engineer.urls")),
+    
 
     # API
     path("api/products/", product_api_views.api_product_collection, name="api_products_collection"),
     path("api/products/<int:product_id>/", product_api_views.api_product_resource, name="api_product_resource"),
     path("api/producers/", producer_api_views.api_producer_collection, name="api_producers_collection"),
     path("api/producers/<int:producer_id>/", producer_api_views.api_producer_resource, name="api_producer_resource"),
+    path("recommendations/", views_ai.customer_recommendations, name="customer_recommendations"),
+    path("api/recommendations/", views_ai.recommendations_api, name="recommendations_api"),
 ]
-
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

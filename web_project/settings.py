@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "customers",
     "basket",
     "managers",
+    "ai_engineer",
 ]
 
 MIDDLEWARE = [

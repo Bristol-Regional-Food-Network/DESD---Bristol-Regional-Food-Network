@@ -1,0 +1,118 @@
+{% extends "base/base.html" %}
+
+{% block title %}AI Engineer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="p-4 mb-4 bg-white border rounded shadow-sm">
+        <h1 class="h2 mb-1">AI Engineer Dashboard</h1>
+        <p class="text-muted mb-0">Train and manage the hybrid recommendation model.</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-dismissible fade show" role="alert"
+                 style="background:#d1e7dd; border-color:#badbcc;">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Model Status -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Model Status</h6>
+                    {% if model_exists %}
+                        <span class="badge bg-success fs-6">✅ Trained</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark fs-6">⚠️ Not trained yet</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% if summary %}
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Last Training Stats</h6>
+                    <p class="mb-1"><strong>{{ summary.users }}</strong> users</p>
+                    <p class="mb-1"><strong>{{ summary.products }}</strong> products</p>
+                    <p class="mb-0"><strong>{{ summary.orders_rows }}</strong> order rows</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="text-muted">Model Weights</h6>
+                    <p class="mb-1">SVD (α): <strong>{{ summary.alpha }}</strong></p>
+                    <p class="mb-1">Random Forest (β): <strong>{{ summary.beta }}</strong></p>
+                    <p class="mb-0">Top N: <strong>{{ summary.top_n }}</strong></p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Train Button -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Train / Retrain Model</h5>
+            <p class="text-muted">
+                Runs the full hybrid pipeline (SVD + Random Forest) on the orders dataset
+                and generates personalised recommendations for all users.
+            </p>
+            <form method="post" action="{% url 'ai_engineer_train' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-dark"
+                        onclick="return confirm('Train the model? This may take a few seconds.')">
+                    🚀 Train Model
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Results -->
+    {% if model_exists %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title">View Generated Recommendations</h5>
+            <p class="text-muted">Inspect all recommendations produced by the model across all users.</p>
+            <a href="{% url 'ai_engineer_recommendations' %}" class="btn btn-outline-dark">
+                📊 View Recommendations Table
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- XAI Explanation -->
+    <div class="card shadow-sm border-start border-4 border-dark">
+        <div class="card-body">
+            <h5 class="card-title">How the Hybrid Model Works</h5>
+            <p class="text-muted mb-2">
+                The recommendation model combines two machine learning techniques:
+            </p>
+            <ul class="mb-2">
+                <li>
+                    <strong>SVD (Matrix Factorisation)</strong> — identifies hidden patterns between
+                    users and products based on order history. Weighted at
+                    α = {{ summary.alpha|default:"0.6" }}.
+                </li>
+                <li>
+                    <strong>Random Forest</strong> — predicts the probability a user will reorder
+                    a product, using features like category, frequency, and recency. Weighted at
+                    β = {{ summary.beta|default:"0.4" }}.
+                </li>
+            </ul>
+            <p class="text-muted mb-0">
+                Final score = <code>α × SVD score + β × RF probability</code>
+            </p>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
