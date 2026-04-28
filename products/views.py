@@ -3,7 +3,9 @@ from datetime import timedelta
 import json
 import math
 import re
+import os
 
+import pandas as pd
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
@@ -18,8 +20,6 @@ from .forms import ProductForm, ReviewForm
 from .models import Product, Review
 from producers.models import Producer
 from basket.models import Order, OrderItem
-
-from .ai_client import inspect_product_image
 
 
 POSTCODE_LOOKUP = {
@@ -268,6 +268,35 @@ def product_list(request):
             "producer": item.get("producer", ""),
         })
 
+    recommended_products = []
+
+    if request.user.is_authenticated:
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            rec_path = os.path.join(base_dir, "hybrid_recommendations.csv")
+
+            if os.path.exists(rec_path):
+                df = pd.read_csv(rec_path)
+                user_recs = df[df["user_key"] == request.user.username].head(5)
+
+                for _, rec in user_recs.iterrows():
+                    product = Product.objects.filter(
+                        name__iexact=str(rec["product_name"]).strip(),
+                        producer__display_name__iexact=str(rec["producer_name"]).strip(),
+                    ).select_related("producer").first()
+
+                    if product and product.is_visible_to_customers:
+                        recommended_products.append({
+                            "product": product,
+                            "final_score": rec.get("final_score", 0),
+                            "svd_score": rec.get("svd_score", 0),
+                            "rf_score": rec.get("rf_score", 0),
+                            "total_orders": rec.get("total_orders", 0),
+                        })
+
+        except Exception as e:
+            print("Recommendation load error:", e)
+
     return render(
         request,
         "products/product_list.html",
@@ -282,6 +311,7 @@ def product_list(request):
             "selected_organic": selected_organic,
             "query": q,
             "saved_items": saved_items,
+            "recommended_products": recommended_products,
         },
     )
 
@@ -363,7 +393,7 @@ def add_product(request):
         return redirect("producers:producer_dashboard")
 
     if request.method == "POST":
-        form = ProductForm(request.POST, request.FILES)
+        form = ProductForm(request.POST)
         if form.is_valid():
             product = form.save(commit=False)
             product.producer = producer
@@ -382,34 +412,8 @@ def add_product(request):
                 product.surplus_expires_at = None
 
             product.save()
-
-            if product.image:
-                try:
-                    result = inspect_product_image(product.image.path)
-
-                    product.ai_predicted_label = result.get("predicted_label", "")
-                    product.ai_fresh_probability = result.get("fresh_probability")
-                    product.ai_rotten_probability = result.get("rotten_probability")
-                    product.ai_colour_score = result.get("colour_score")
-                    product.ai_size_score = result.get("size_score")
-                    product.ai_ripeness_score = result.get("ripeness_score")
-                    product.ai_grade = result.get("grade") or ""
-                    product.ai_action = result.get("action", "")
-                    product.ai_explanation = "\n".join(result.get("explanation", []))
-                    product.ai_last_checked_at = timezone.now()
-
-                    product.save()
-
-                except Exception as e:
-                    messages.warning(
-                        request,
-                        f"Product saved, but AI inspection could not be completed: {e}"
-                    )
-
             messages.success(request, "Product added successfully.")
             return redirect("producers:producer_dashboard")
-        else:
-            print("FORM ERRORS:", form.errors)
     else:
         form = ProductForm()
 
@@ -466,7 +470,7 @@ def edit_product(request, product_id):
     product = get_object_or_404(Product, id=product_id, producer=producer)
 
     if request.method == "POST":
-        form = ProductForm(request.POST, request.FILES, instance=product)
+        form = ProductForm(request.POST, instance=product)
         if form.is_valid():
             updated_product = form.save(commit=False)
 
@@ -485,29 +489,6 @@ def edit_product(request, product_id):
                 updated_product.surplus_expires_at = None
 
             updated_product.save()
-            if updated_product.image:
-                try:
-                    result = inspect_product_image(updated_product.image.path)
-
-                    updated_product.ai_predicted_label = result.get("predicted_label", "")
-                    updated_product.ai_fresh_probability = result.get("fresh_probability")
-                    updated_product.ai_rotten_probability = result.get("rotten_probability")
-                    updated_product.ai_colour_score = result.get("colour_score")
-                    updated_product.ai_size_score = result.get("size_score")
-                    updated_product.ai_ripeness_score = result.get("ripeness_score")
-                    updated_product.ai_grade = result.get("grade") or ""
-                    updated_product.ai_action = result.get("action", "")
-                    updated_product.ai_explanation = "\n".join(result.get("explanation", []))
-                    updated_product.ai_last_checked_at = timezone.now()
-
-                    updated_product.save()
-
-                except Exception as e:
-                    messages.warning(
-                        request,
-                        f"Product updated, but AI inspection could not be completed: {e}"
-                    )
-
             messages.success(request, "Product updated successfully.")
             return redirect("producers:producer_dashboard")
     else:
