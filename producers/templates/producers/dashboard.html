@@ -61,6 +61,52 @@
                   <p class="small text-danger"><strong>Best before:</strong> {{ p.best_before_date }}</p>
                 {% endif %}
 
+                {% if p.ai_predicted_label %}
+                  <hr class="my-3">
+
+                  <div class="small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <strong>AI:</strong>
+
+                      {% if p.ai_predicted_label == "fresh" %}
+                        <span class="badge bg-success">Fresh</span>
+                      {% elif p.ai_predicted_label == "rotten" %}
+                        <span class="badge bg-danger">Rotten</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
+                      {% endif %}
+
+                      {% if p.ai_grade == "A" %}
+                        <span class="badge bg-success">Grade A</span>
+                      {% elif p.ai_grade == "B" %}
+                        <span class="badge bg-warning text-dark">Grade B</span>
+                      {% elif p.ai_grade == "C" %}
+                        <span class="badge bg-danger">Grade C</span>
+                      {% endif %}
+                    </div>
+
+                    {% if p.ai_action %}
+                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
+                    {% endif %}
+
+                    {% if p.ai_colour_score %}
+                      <p class="small mb-1">
+                        <strong>Scores:</strong>
+                        Colour {{ p.ai_colour_score }},
+                        Size {{ p.ai_size_score }},
+                        Ripeness {{ p.ai_ripeness_score }}
+                      </p>
+                    {% endif %}
+
+                    {% if p.ai_explanation %}
+                      <details class="mt-2">
+                        <summary class="small text-primary">View explanation</summary>
+                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
+                      </details>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
                 <div class="mt-auto d-flex gap-2">
                   <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
                   <form method="post" action="{% url 'products:delete' p.id %}">
@@ -103,6 +149,52 @@
 
                 {% if p.season_range_display %}
                   <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
+                {% endif %}
+
+                {% if p.ai_predicted_label %}
+                  <hr class="my-3">
+
+                  <div class="small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <strong>AI:</strong>
+
+                      {% if p.ai_predicted_label == "fresh" %}
+                        <span class="badge bg-success">Fresh</span>
+                      {% elif p.ai_predicted_label == "rotten" %}
+                        <span class="badge bg-danger">Rotten</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
+                      {% endif %}
+
+                      {% if p.ai_grade == "A" %}
+                        <span class="badge bg-success">Grade A</span>
+                      {% elif p.ai_grade == "B" %}
+                        <span class="badge bg-warning text-dark">Grade B</span>
+                      {% elif p.ai_grade == "C" %}
+                        <span class="badge bg-danger">Grade C</span>
+                      {% endif %}
+                    </div>
+
+                    {% if p.ai_action %}
+                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
+                    {% endif %}
+
+                    {% if p.ai_colour_score %}
+                      <p class="small mb-1">
+                        <strong>Scores:</strong>
+                        Colour {{ p.ai_colour_score }},
+                        Size {{ p.ai_size_score }},
+                        Ripeness {{ p.ai_ripeness_score }}
+                      </p>
+                    {% endif %}
+
+                    {% if p.ai_explanation %}
+                      <details class="mt-2">
+                        <summary class="small text-primary">View explanation</summary>
+                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
+                      </details>
+                    {% endif %}
+                  </div>
                 {% endif %}
 
                 <div class="mt-3 d-flex gap-2">
@@ -161,7 +253,53 @@
                 {% if p.season_range_display %}
                   <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
                 {% endif %}
+              
+                {% if p.ai_predicted_label %}
+                  <hr class="my-3">
 
+                  <div class="small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <strong>AI:</strong>
+
+                      {% if p.ai_predicted_label == "fresh" %}
+                        <span class="badge bg-success">Fresh</span>
+                      {% elif p.ai_predicted_label == "rotten" %}
+                        <span class="badge bg-danger">Rotten</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
+                      {% endif %}
+
+                      {% if p.ai_grade == "A" %}
+                        <span class="badge bg-success">Grade A</span>
+                      {% elif p.ai_grade == "B" %}
+                        <span class="badge bg-warning text-dark">Grade B</span>
+                      {% elif p.ai_grade == "C" %}
+                        <span class="badge bg-danger">Grade C</span>
+                      {% endif %}
+                    </div>
+
+                    {% if p.ai_action %}
+                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
+                    {% endif %}
+
+                    {% if p.ai_colour_score %}
+                      <p class="small mb-1">
+                        <strong>Scores:</strong>
+                        Colour {{ p.ai_colour_score }},
+                        Size {{ p.ai_size_score }},
+                        Ripeness {{ p.ai_ripeness_score }}
+                      </p>
+                    {% endif %}
+
+                    {% if p.ai_explanation %}
+                      <details class="mt-2">
+                        <summary class="small text-primary">View explanation</summary>
+                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
+                      </details>
+                    {% endif %}
+                  </div>
+                {% endif %}
+                
                 <div class="mt-3 d-flex gap-2">
                   <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
                   <form method="post" action="{% url 'products:delete' p.id %}">
@@ -206,6 +344,52 @@
                   <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
                 {% endif %}
 
+                {% if p.ai_predicted_label %}
+                  <hr class="my-3">
+
+                  <div class="small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <strong>AI:</strong>
+
+                      {% if p.ai_predicted_label == "fresh" %}
+                        <span class="badge bg-success">Fresh</span>
+                      {% elif p.ai_predicted_label == "rotten" %}
+                        <span class="badge bg-danger">Rotten</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
+                      {% endif %}
+
+                      {% if p.ai_grade == "A" %}
+                        <span class="badge bg-success">Grade A</span>
+                      {% elif p.ai_grade == "B" %}
+                        <span class="badge bg-warning text-dark">Grade B</span>
+                      {% elif p.ai_grade == "C" %}
+                        <span class="badge bg-danger">Grade C</span>
+                      {% endif %}
+                    </div>
+
+                    {% if p.ai_action %}
+                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
+                    {% endif %}
+
+                    {% if p.ai_colour_score %}
+                      <p class="small mb-1">
+                        <strong>Scores:</strong>
+                        Colour {{ p.ai_colour_score }},
+                        Size {{ p.ai_size_score }},
+                        Ripeness {{ p.ai_ripeness_score }}
+                      </p>
+                    {% endif %}
+
+                    {% if p.ai_explanation %}
+                      <details class="mt-2">
+                        <summary class="small text-primary">View explanation</summary>
+                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
+                      </details>
+                    {% endif %}
+                  </div>
+                {% endif %}
+                
                 <div class="mt-3 d-flex gap-2">
                   <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
                   <form method="post" action="{% url 'products:delete' p.id %}">

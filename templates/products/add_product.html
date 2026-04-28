@@ -9,8 +9,15 @@
             <div class="card-body p-4">
                 <h2 class="mb-4 text-center">{{ page_title|default:"Add Product" }}</h2>
 
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
+
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please fix the following errors:</strong>
+                            {{ form.errors }}
+                        </div>
+                    {% endif %}
 
                     {% if form.non_field_errors %}
                         <div class="alert alert-danger">
@@ -21,6 +28,15 @@
                     <div class="mb-3">
                         <label class="form-label">Product Name</label>
                         {{ form.name }}
+                    </div>
+
+                    <!-- Image upload field with instructions for AI quality inspection -->
+                    <div class="mb-3">
+                        <label class="form-label">Product Image</label>
+                        {{ form.image }}
+                        <div class="form-text">
+                            Upload an image for AI quality inspection.
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -38,6 +54,31 @@
                         {{ form.stock }}
                     </div>
 
+                    <div class="mb-3">
+                        <label for="{{ form.unit_value.id_for_label }}" class="form-label">Unit Value</label>
+                        {{ form.unit_value }}
+                        {% if form.unit_value.errors %}
+                            <div class="text-danger small">{{ form.unit_value.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Example: 500 for 500g, 1 for 1kg, 6 for a pack of 6.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.unit.id_for_label }}" class="form-label">Unit</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                            <div class="text-danger small">{{ form.unit.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="text-danger small">{{ form.category.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
                     <div class="mb-3">
                         <label class="form-label">Section</label>
                         {{ form.section }}
