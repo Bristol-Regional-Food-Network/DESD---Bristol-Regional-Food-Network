@@ -14,6 +14,8 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=roles)
 
+    admin_approved = models.BooleanField(default=True)
+
     address = models.CharField(max_length=255, null=True, blank=True)
     postcode = models.CharField(max_length=20, null=True, blank=True)
     farm_name = models.CharField(max_length=255, null=True, blank=True)

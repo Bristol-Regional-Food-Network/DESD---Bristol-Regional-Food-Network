@@ -1,8 +1,11 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
-from users.views import register
+
+from users.views import register, customer_register, producer_register, employee_register, pending_employees, approve_employee
+
 from core.auth_views import post_login_redirect
+
 from products import views as product_api_views
 from producers import views as producer_api_views
 from ai_engineer import views as views_ai
@@ -13,7 +16,16 @@ urlpatterns = [
     path("", include("core.urls")),
 
     # Auth
+    # Registration paths
     path("register/", register, name="register"),
+    path("register/customer/", customer_register, name="customer_register"),
+    path("register/producer/", producer_register, name="producer_register"),
+    path("register/employee/", employee_register, name="employee_register"),
+
+    path("employees/pending/", pending_employees, name="pending_employees"),
+    path("employees/<int:profile_id>/approve/", approve_employee, name="approve_employee"),
+
+    # Login/logout paths
     path("login/", auth_views.LoginView.as_view(
         template_name="auth/login.html",
         redirect_authenticated_user=True

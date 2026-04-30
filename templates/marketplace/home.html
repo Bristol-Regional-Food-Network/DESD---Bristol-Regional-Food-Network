@@ -104,7 +104,7 @@
         </span>
       {% endif %}
     {% else %}
-      <a class="btn btn-outline-dark" href="{% url 'register' %}">
+      <a class="btn btn-primary" href="{% url 'customer_register' %}">
         Register as Customer
       </a>
     {% endif %}
@@ -125,7 +125,7 @@
           <span class="text-muted">Log in with a producer account to access the dashboard.</span>
         {% endif %}
       {% else %}
-        <a class="btn btn-warning" href="{% url 'register' %}">Register</a>
+        <a class="btn btn-warning" href="{% url 'producer_register' %}">Register as Producer</a>
       {% endif %}
     </div>
   </div>

@@ -50,6 +50,12 @@
                         Manager Dashboard
                     </a>
                 </li>
+            
+                <li class="nav-item">
+                    <a class="nav-link btn btn-outline-warning text-white" href="{% url 'pending_employees' %}">
+                        Pending Employees
+                    </a>
+                </li>
                 {% endif %}
 
                 {% if user.is_authenticated %}
@@ -110,7 +116,7 @@
 
                     <!-- Register -->
                     <li class="nav-item">
-                        <a class="btn btn-warning btn-sm" href="{% url 'register' %}">
+                        <a class="btn btn-outline-light btn-sm" href="{% url 'register' %}">
                             Register
                         </a>
                     </li>
