@@ -1,6 +1,25 @@
 {% extends "base/base.html" %}
 {% block title %}Register Producer{% endblock %}
+
 {% block content %}
-<h1 class="mb-3">Producer Registration</h1>
-<p class="text-muted">Form coming next.</p>
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <h1 class="h4 mb-3">Producer Registration</h1>
+        <p class="text-muted mb-4">Create a producer account to manage products and orders.</p>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button class="btn btn-warning w-100" type="submit">
+            Register as Producer
+          </button>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
