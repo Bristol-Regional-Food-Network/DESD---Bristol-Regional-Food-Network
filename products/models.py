@@ -315,6 +315,15 @@ class Product(models.Model):
     @property
     def review_count(self):
         return self.reviews.filter(is_approved=True).count()
+    
+    def get_ai_grade_badge_class(self):
+        if self.ai_grade == "A":
+            return "bg-success"
+        elif self.ai_grade == "B":
+            return "bg-warning text-dark"
+        elif self.ai_grade == "C":
+            return "bg-danger"
+        return "bg-secondary"
 
 
 class Review(models.Model):

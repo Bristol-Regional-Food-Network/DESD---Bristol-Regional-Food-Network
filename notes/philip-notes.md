@@ -375,3 +375,112 @@ The model is loaded once when the Flask service starts
 - OpenCV uses opencv-python-headless to avoid GUI issues
 - The service includes validation for uploaded files (type, safety)
 - Predictions are logged for monitoring and evaluation
+
+## Registration System Redesign 
+Redesigned the user registration system to replace the previous single dynamic form with separate registration flows for each user type. This improves usability, data validation, and security while aligning with DESD test case requirements.
+
+### Separate Registration Pages
+The original system used one registration page with a role dropdown and JavaScript to dynamically show/hide fields. This was replaced with three dedicated registration routes:
+- `/register/customer/`
+- `/register/producer/`
+- `/register/employee/`
+
+A new registration selection page (`/register/`) was implemented to allow users to choose the appropriate registration type.
+
+### Customer Registration
+Created a dedicated customer registration form that collects:
+- Username
+- Email
+- Password
+- Address
+- Postcode
+
+### Producer Registration
+Created a separate producer registration form that collects:
+- Username
+- Email
+- Password
+- Business address
+- Postcode
+- Farm name
+
+### Employee Registration (AI Engineer / Manager)
+Implemented a restricted registration flow for internal roles:
+
+- AI Engineer
+- Manager
+
+Users select their role during registration. These accounts are created with:
+
+- `is_active = False`
+- `admin_approved = False`
+
+This prevents login until an administrator approves the account.
+
+### Admin Approval System
+Added an approval workflow for employee accounts:
+
+- Created a view to list all unapproved AI Engineer and Manager accounts
+- Added an approval action that:
+  - Sets `admin_approved = True`
+  - Activates the user account (`is_active = True`)
+
+This ensures that only authorised internal users can access sensitive system functionality.
+
+### Removal of Dynamic Form Logic
+Removed the original dynamic registration logic that relied on:
+
+- Role dropdown selection
+- JavaScript to toggle fields
+
+This reduces complexity and avoids validation issues where hidden fields could still be submitted incorrectly.
+
+### URL Routing Fix
+Resolved a routing conflict where customer and producer registration routes were being handled by placeholder views in `core.urls`. These were removed so that all registration routes are now handled correctly by `users.views`.
+
+### Outcome
+The new system:
+- Provides clearer user flows for different roles
+- Improves data validation and form reliability
+- Adds a secure approval process for internal users
+- Aligns with DESD functional and security requirements
+- Improves maintainability by separating concerns across forms and views
+
+## AI Quality Grade Display for Customers
+
+Implemented a feature allowing customers to view the AI-generated quality grade of products, along with a clear explanation of how that grade was determined. This improves transparency and supports trust in the AI system.
+
+### Product List Display
+On the product listing page, a badge is shown for each product that has been assessed by the AI system:
+- Displays: `AI Grade: A/B/C`
+- Colour-coded for quick understanding:
+  - A → Green (high quality)
+  - B → Yellow (medium quality)
+  - C → Red (lower quality)
+
+The badge styling is handled using a model method (`get_ai_grade_badge_class`) to keep logic out of the templates and improve maintainability.
+
+### Product Detail Page Enhancements
+Expanded the AI section on the product detail page to provide a full breakdown of the assessment:
+- Displays the AI grade badge next to the "AI Quality Grade" label
+- Shows a structured explanation section including:
+  - Colour score
+  - Size score
+  - Ripeness score
+  - AI-generated explanation text
+
+### Conditional Display
+- If a product has not been assessed by the AI:
+  - A “Not assessed” badge is shown
+  - The explanation section is hidden
+- If a product has been assessed:
+  - The full breakdown and explanation are displayed
+
+### Outcome
+This feature improves the system by:
+
+- Increasing transparency of AI decisions (Explainable AI)
+- Helping customers make more informed purchasing decisions
+- Enhancing user trust in automated grading
+- Demonstrating clear integration between AI outputs and frontend UI
+- Improving overall usability without adding unnecessary complexity

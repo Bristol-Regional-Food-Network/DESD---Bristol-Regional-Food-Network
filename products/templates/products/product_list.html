@@ -39,6 +39,13 @@
                                         <span class="badge bg-secondary">Not Certified</span>
                                     {% endif %}
                                 </div>
+                                {% if rec.product.ai_grade %}
+                                    <div class="mb-2">
+                                        <span class="badge {{ rec.product.get_ai_grade_badge_class }}">
+                                            AI Grade: {{ rec.product.ai_grade }}
+                                        </span>
+                                    </div>
+                                {% endif %}
 
                                 <p class="small text-muted mb-2">
                                     Based on your order history and similar purchase patterns.
@@ -188,6 +195,13 @@
                                             <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
 
                                     {% if product.surplus_note %}
                                         <p class="small text-muted mb-1">{{ product.surplus_note }}</p>
@@ -238,6 +252,13 @@
                                             <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
 
                                     {% if product.season_range_display %}
                                         <p class="small text-muted mb-2">
@@ -284,7 +305,13 @@
                                             <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
-
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
                                     <p class="mb-2">
                                         <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
                                         <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
@@ -331,7 +358,14 @@
                                             <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
-
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                    
                                     {% if product.best_before_date %}
                                         <p class="small text-danger mb-1">
                                             <strong>Best before:</strong> {{ product.best_before_date }}
@@ -399,6 +433,14 @@
                                         {% endif %}
                                     </div>
 
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+
                                     {% if product.surplus_note %}
                                         <p class="small text-muted mb-1">{{ product.surplus_note }}</p>
                                     {% endif %}
@@ -465,7 +507,13 @@
                                             <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
-
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
                                     {% if product.season_range_display %}
                                         <p class="small text-muted mb-2">
                                             Available: {{ product.season_range_display }}
@@ -534,7 +582,13 @@
                                             <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
-
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
                                     <p class="mb-2">
                                         <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
                                         <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
@@ -598,7 +652,13 @@
                                             <span class="badge bg-secondary">Not Certified</span>
                                         {% endif %}
                                     </div>
-
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
                                     <div class="mb-2">
                                         {% if product.customer_status == "In Season" %}
                                             <span class="badge bg-success">In Season</span>

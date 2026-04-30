@@ -72,6 +72,51 @@
                 <span class="badge bg-secondary ms-1">Not Certified</span>
               {% endif %}
             </p>
+            <p class="mb-2">
+              <strong>AI Quality Grade:</strong>
+              {% if product.ai_grade %}
+                <span class="badge {{ product.get_ai_grade_badge_class }} ms-1">
+                  AI Grade: {{ product.ai_grade }}
+                </span>
+              {% else %}
+                <span class="badge bg-secondary ms-1">
+                  AI Grade: Not assessed
+                </span>
+              {% endif %}
+            </p>
+
+            {% if product.ai_grade %}
+              <div class="border rounded p-3 bg-light mb-3">
+                <h2 class="h6 mb-2">AI Assessment Explanation</h2>
+
+                <div class="row g-2 mb-2">
+                  {% if product.ai_colour_score %}
+                    <div class="col-md-4">
+                      <small class="text-muted d-block">Colour Score</small>
+                      <strong>{{ product.ai_colour_score }}</strong>
+                    </div>
+                  {% endif %}
+
+                  {% if product.ai_size_score %}
+                    <div class="col-md-4">
+                      <small class="text-muted d-block">Size Score</small>
+                      <strong>{{ product.ai_size_score }}</strong>
+                    </div>
+                  {% endif %}
+
+                  {% if product.ai_ripeness_score %}
+                    <div class="col-md-4">
+                      <small class="text-muted d-block">Ripeness Score</small>
+                      <strong>{{ product.ai_ripeness_score }}</strong>
+                    </div>
+                  {% endif %}
+                </div>
+
+                <p class="mb-0 text-muted">
+                  {{ product.ai_explanation|default:"No AI explanation available for this product yet." }}
+                </p>
+              </div>
+            {% endif %}
 
             {% if product.season_range_display %}
               <p class="mb-2 text-muted">
