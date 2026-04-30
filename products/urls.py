@@ -10,4 +10,6 @@ urlpatterns = [
     path("<int:product_id>/edit/", views.edit_product, name="edit"),
     path("<int:product_id>/delete/", views.delete_product, name="delete"),
     path("<int:product_id>/review/", views.submit_review, name="submit_review"),
+    path("<int:product_id>/distance/", views.product_distance_api, name="product_distance_api"),
+    path("<int:product_id>/distance-map/", views.product_distance_map_api, name="product_distance_map_api"),
 ]

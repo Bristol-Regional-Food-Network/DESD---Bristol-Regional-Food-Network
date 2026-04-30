@@ -44,6 +44,41 @@
       <div class="card shadow-sm mb-4">
         <div class="card-body">
           <h2 class="h5 mb-3">Producer: {{ group.producer_name }}</h2>
+          <div class="border rounded p-3 bg-light mb-3 col-md-6 col-lg-5">
+            <p class="mb-2">
+              <strong>Producer postcode:</strong>
+              {% if group.producer_postcode %}
+                {{ group.producer_postcode }}
+              {% else %}
+                <span class="text-muted">Not available</span>
+              {% endif %}
+            </p>
+
+            <div
+              id="basket-map-{{ forloop.counter }}"
+              class="rounded border mb-3"
+              style="height: 160px;"
+              data-customer-postcode="{{ customer_postcode }}"
+              data-producer-postcode="{{ group.producer_postcode }}"
+              data-producer-name="{{ group.producer_name }}"
+            ></div>
+
+            {% if group.food_miles_total %}
+              <p class="fw-semibold mb-2">
+                {{ group.food_miles_total }} miles from delivery postcode.
+              </p>
+
+              {% if group.food_miles_total <= 20 %}
+                <span class="badge bg-success">Within 20-mile radius</span>
+              {% else %}
+                <span class="badge bg-danger">Outside 20-mile radius</span>
+              {% endif %}
+            {% else %}
+              <p class="text-muted mb-0">
+                Distance could not be calculated for this producer.
+              </p>
+            {% endif %}
+          </div>
 
           {% for item in group.items %}
             <div class="d-flex justify-content-between align-items-center border-bottom py-3">
@@ -113,4 +148,63 @@
     </div>
   {% endif %}
 </div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("[id^='basket-map-']").forEach(function (mapDiv) {
+    const customerPostcode = mapDiv.dataset.customerPostcode;
+    const producerPostcode = mapDiv.dataset.producerPostcode;
+    const producerName = mapDiv.dataset.producerName;
+
+    if (!customerPostcode || !producerPostcode) {
+      mapDiv.style.display = "none";
+      return;
+    }
+
+    fetch(`/basket/distance-map/?customer_postcode=${encodeURIComponent(customerPostcode)}&producer_postcode=${encodeURIComponent(producerPostcode)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (!data.success) {
+          mapDiv.style.display = "none";
+          return;
+        }
+
+        const map = L.map(mapDiv.id);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+        }).addTo(map);
+
+        L.marker([data.customer.lat, data.customer.lng])
+          .addTo(map)
+          .bindPopup("Delivery postcode: " + data.customer_postcode);
+
+        L.marker([data.producer.lat, data.producer.lng])
+          .addTo(map)
+          .bindPopup("Producer: " + producerName + " (" + data.producer_postcode + ")");
+
+        L.polyline([
+          [data.customer.lat, data.customer.lng],
+          [data.producer.lat, data.producer.lng]
+        ]).addTo(map);
+
+        const bounds = L.latLngBounds([
+          [data.customer.lat, data.customer.lng],
+          [data.producer.lat, data.producer.lng]
+        ]);
+
+        map.fitBounds(bounds, {
+          padding: [25, 25]
+        });
+
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 200);
+      });
+  });
+});
+</script>
 {% endblock %}

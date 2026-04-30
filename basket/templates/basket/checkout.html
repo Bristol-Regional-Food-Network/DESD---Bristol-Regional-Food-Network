@@ -16,7 +16,17 @@
           {% for group in producer_groups %}
             <div class="border rounded p-3 mb-3">
               <div class="text-muted small mb-1">Producer</div>
-              <h3 class="h6 mb-3">{{ group.producer_name }}</h3>
+              <h3 class="h6 mb-1">{{ group.producer_name }}</h3>
+
+              {% if group.food_miles_total %}
+                <p class="text-muted small mb-3">
+                  <strong>Food miles:</strong> {{ group.food_miles_total }} miles from delivery postcode
+                </p>
+              {% else %}
+                <p class="text-muted small mb-3">
+                  <strong>Food miles:</strong> Not available
+                </p>
+              {% endif %}
 
               {% for item in group.items %}
                 <div class="d-flex justify-content-between border-bottom py-3">
@@ -116,6 +126,30 @@
             <hr class="my-4">
 
             <h3 class="h6 mb-3">Delivery & Billing Information</h3>
+
+            <div class="alert alert-light small py-2 mb-3">
+              If no delivery address is entered, your saved account address will be used.
+            </div>
+
+            <div class="border rounded p-3 bg-light mb-3">
+              <p class="mb-2">
+                <strong>Delivery postcode:</strong>
+                {% if customer_postcode %}
+                  {{ customer_postcode }}
+                {% else %}
+                  <span class="text-muted">Not available</span>
+                {% endif %}
+              </p>
+
+              <p class="mb-0">
+                <strong>Total food miles:</strong>
+                {% if total_food_miles %}
+                  <span class="badge bg-primary ms-1">{{ total_food_miles }} miles</span>
+                {% else %}
+                  <span class="badge bg-secondary ms-1">Not available</span>
+                {% endif %}
+              </p>
+            </div>
 
             <div class="mb-3">
               <label for="{{ form.billing_address.id_for_label }}" class="form-label">Delivery Address</label>

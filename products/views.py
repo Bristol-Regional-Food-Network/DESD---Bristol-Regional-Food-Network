@@ -2,10 +2,13 @@ from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 import json
 import math
+from math import radians, sin, cos, sqrt, atan2
 import re
 import os
-
 import pandas as pd
+from basket.views import _estimate_food_miles
+import pgeocode
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Avg
@@ -22,6 +25,7 @@ from producers.models import Producer
 from basket.models import Order, OrderItem
 
 from .ai_client import inspect_product_image
+from core.utils import calculate_postcode_distance
 
 
 POSTCODE_LOOKUP = {
@@ -30,6 +34,66 @@ POSTCODE_LOOKUP = {
     "BS3": (51.4416, -2.6010),
 }
 
+def _postcode_coordinates(postcode):
+    if not postcode:
+        return None
+
+    nomi = pgeocode.Nominatim("GB")
+    result = nomi.query_postal_code(postcode)
+
+    if result is None:
+        return None
+
+    if result.latitude != result.latitude or result.longitude != result.longitude:
+        return None
+
+    return {
+        "lat": float(result.latitude),
+        "lng": float(result.longitude),
+    }
+
+@login_required
+def product_distance_map_api(request, product_id):
+    product = get_object_or_404(
+        Product.objects.select_related("producer"),
+        id=product_id
+    )
+
+    customer_postcode = request.GET.get("postcode", "").strip()
+    customer_postcode = customer_postcode or request.session.get("customer_postcode", "")
+    if not customer_postcode and request.user.is_authenticated:
+        customer_postcode = getattr(request.user.userprofile, "postcode", "")
+
+    producer_postcode = getattr(product.producer, "postcode", "")
+    if not producer_postcode:
+        producer_user = getattr(product.producer, "user", None)
+        if producer_user and hasattr(producer_user, "userprofile"):
+            producer_postcode = getattr(producer_user.userprofile, "postcode", "")
+
+    customer_coords = _postcode_coordinates(customer_postcode)
+    producer_coords = _postcode_coordinates(producer_postcode)
+
+    if not customer_coords or not producer_coords:
+        return JsonResponse({
+            "success": False,
+            "message": "Map could not be loaded because one or both postcodes are unavailable."
+        })
+
+    food_miles = _distance_between_coordinates(
+        customer_coords["lat"],
+        customer_coords["lng"],
+        producer_coords["lat"],
+        producer_coords["lng"],
+    )
+
+    return JsonResponse({
+        "success": True,
+        "customer_postcode": customer_postcode,
+        "producer_postcode": producer_postcode,
+        "customer": customer_coords,
+        "producer": producer_coords,
+        "distance_miles": food_miles,
+    })
 
 def _json_error(message: str, status: int = 400, **extra):
     payload = {"error": message}
@@ -349,7 +413,16 @@ def product_detail(request, product_id):
         request.session.modified = True
 
     customer_postcode = request.session.get("customer_postcode", "")
+    if not customer_postcode and request.user.is_authenticated:
+        customer_postcode = getattr(request.user.userprofile, "postcode", "")
+
     producer_postcode = getattr(product.producer, "postcode", "")
+    if not producer_postcode:
+        producer_user = getattr(product.producer, "user", None)
+        if producer_user and hasattr(producer_user, "userprofile"):
+            producer_postcode = getattr(producer_user.userprofile, "postcode", "")
+    product.producer.postcode = producer_postcode
+
     food_miles = _estimate_food_miles(customer_postcode, product.producer)
     within_radius = food_miles is not None and food_miles <= 20
 
@@ -808,3 +881,50 @@ def api_product_resource(request: HttpRequest, product_id: int):
 
     product.save()
     return JsonResponse(_product_to_dict(product))
+
+@login_required
+def product_distance_api(request, product_id):
+    product = Product.objects.get(id=product_id)
+
+    customer_profile = request.user.userprofile
+    customer_postcode = customer_profile.postcode
+
+    producer_postcode = product.producer.user.userprofile.postcode
+
+    distance = calculate_postcode_distance(
+        customer_postcode,
+        producer_postcode
+    )
+
+    if distance is None:
+        return JsonResponse({
+            "success": False,
+            "message": "Distance could not be calculated."
+        })
+
+    return JsonResponse({
+        "success": True,
+        "distance_miles": distance,
+        "customer_postcode": customer_postcode,
+        "producer_postcode": producer_postcode,
+    })
+
+def _distance_between_coordinates(lat1, lon1, lat2, lon2):
+    earth_radius_miles = 3958.8
+
+    lat1 = radians(lat1)
+    lon1 = radians(lon1)
+    lat2 = radians(lat2)
+    lon2 = radians(lon2)
+
+    lat_diff = lat2 - lat1
+    lon_diff = lon2 - lon1
+
+    a = (
+        sin(lat_diff / 2) ** 2
+        + cos(lat1) * cos(lat2) * sin(lon_diff / 2) ** 2
+    )
+
+    c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+    return round(earth_radius_miles * c, 1)

@@ -152,20 +152,42 @@
           <div class="border rounded p-3 bg-light">
             <h2 class="h6 mb-3">Food Miles</h2>
 
-            <form method="get" class="mb-3">
-              <label for="postcode" class="form-label">Delivery postcode</label>
-              <div class="d-flex gap-2">
-                <input
-                  type="text"
-                  id="postcode"
-                  name="postcode"
-                  class="form-control"
-                  value="{{ customer_postcode }}"
-                  placeholder="e.g. BS1 5JG"
-                >
-                <button type="submit" class="btn btn-outline-dark">Update</button>
-              </div>
-            </form>
+            <p class="mb-2">
+              <strong>Delivery postcode:</strong>
+              {% if customer_postcode %}
+                {{ customer_postcode }}
+              {% else %}
+                <span class="text-muted">Not available</span>
+              {% endif %}
+
+              <button
+                class="btn btn-outline-dark btn-sm ms-2"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#updatePostcodeForm"
+                aria-expanded="false"
+                aria-controls="updatePostcodeForm"
+              >
+                Update
+              </button>
+            </p>
+
+            <div class="collapse mb-3" id="updatePostcodeForm">
+              <form method="get">
+                <label for="postcode" class="form-label">Check another delivery postcode</label>
+                <div class="d-flex gap-2">
+                  <input
+                    type="text"
+                    id="postcode"
+                    name="postcode"
+                    class="form-control"
+                    value="{{ customer_postcode }}"
+                    placeholder="e.g. BS1 5JG"
+                  >
+                  <button type="submit" class="btn btn-outline-dark">Save</button>
+                </div>
+              </form>
+            </div>
 
             {% if producer_postcode %}
               <p class="mb-2">
@@ -177,21 +199,22 @@
               </p>
             {% endif %}
 
+            <div id="distance-map" class="mt-3 mb-3 rounded border" style="height: 220px; display: none;"></div>
+            <div id="distance-result" class="mt-2 fw-semibold"></div>
+
             {% if food_miles is not None %}
-              <div class="fw-semibold mb-2">Estimated food miles: {{ food_miles }} miles</div>
+              <div class="fw-semibold mt-3 mb-2">
+                Estimated food miles: {{ food_miles }} miles
+              </div>
 
               {% if within_radius %}
                 <span class="badge bg-success">Within 20-mile radius</span>
               {% else %}
                 <span class="badge bg-danger">Outside 20-mile radius</span>
               {% endif %}
-
-              <div class="text-muted small mt-2">
-                Calculated from your delivery postcode to the producer location.
-              </div>
             {% else %}
-              <div class="text-muted small">
-                Enter your delivery postcode to estimate the distance from this producer.
+              <div class="text-muted small mt-3">
+                Use the update button to enter a delivery postcode and estimate the distance from this producer.
               </div>
             {% endif %}
           </div>
@@ -343,6 +366,11 @@
   </div>
 </div>
 
+<div id="product-data" data-product-id="{{ product.id }}"></div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
   function increaseQty() {
     const input = document.getElementById("quantity");
@@ -377,6 +405,82 @@
       }
     });
   }
+
+  let distanceMap = null;
+  function loadDistance(productId) {
+    const postcode = "{{ customer_postcode|escapejs }}";
+    fetch(`/products/${productId}/distance-map/?postcode=${encodeURIComponent(postcode)}`)
+      .then(response => response.json())
+      .then(data => {
+        const result = document.getElementById("distance-result");
+        const mapDiv = document.getElementById("distance-map");
+
+        if (!data.success) {
+          result.innerHTML = data.message;
+          mapDiv.style.display = "none";
+          return;
+        }
+
+        if (!data.distance_miles) {
+          result.innerHTML = "Distance could not be calculated.";
+        } else {
+          result.innerHTML = "This producer is <strong>" + data.distance_miles + " miles</strong> from your postcode.";
+        }
+
+        mapDiv.style.display = "block";
+
+        if (distanceMap !== null) {
+          distanceMap.remove();
+        }
+
+        distanceMap = L.map("distance-map").setView(
+          [data.customer.lat, data.customer.lng],
+          11
+        );
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+        }).addTo(distanceMap);
+
+        const customerMarker = L.marker([data.customer.lat, data.customer.lng])
+          .addTo(distanceMap)
+          .bindPopup("Customer postcode: " + data.customer_postcode);
+
+        const producerMarker = L.marker([data.producer.lat, data.producer.lng])
+          .addTo(distanceMap)
+          .bindPopup("Producer postcode: " + data.producer_postcode);
+
+        L.polyline([
+          [data.customer.lat, data.customer.lng],
+          [data.producer.lat, data.producer.lng]
+        ]).addTo(distanceMap);
+
+        const bounds = L.latLngBounds([
+          [data.customer.lat, data.customer.lng],
+          [data.producer.lat, data.producer.lng]
+        ]);
+
+        distanceMap.fitBounds(bounds, {
+          padding: [30, 30]
+        });
+
+        setTimeout(() => {
+          distanceMap.invalidateSize();
+        }, 200);
+      })
+      .catch(error => {
+        document.getElementById("distance-result").innerHTML =
+          "Could not load distance map.";
+      });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const productId = document
+      .getElementById("product-data")
+      .dataset.productId;
+
+    loadDistance(productId);
+  });
 </script>
 
 {% endblock %}

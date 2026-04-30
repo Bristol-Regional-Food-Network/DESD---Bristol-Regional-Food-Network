@@ -484,3 +484,82 @@ This feature improves the system by:
 - Enhancing user trust in automated grading
 - Demonstrating clear integration between AI outputs and frontend UI
 - Improving overall usability without adding unnecessary complexity
+
+## Food Miles & Map Integration
+Implemented a food miles and distance visualisation feature across the product detail page, basket, and checkout. This allows customers to see how far products are travelling from producers, supporting sustainability and improving transparency.
+
+The system uses customer and producer postcodes to calculate distance.
+Customer postcode is taken from:
+- The current session if the user updates it using the postcode form
+- The saved customer postcode on their account if no session postcode is set
+
+Producer postcode is taken from:
+- The producer model postcode if available
+- The producer user profile postcode if the producer model postcode is missing
+
+This fallback approach was added because some producer postcodes were stored in `UserProfile` from registration rather than directly on the producer model.
+
+### Use of `pgeocode`
+The `pgeocode` library was added to convert UK postcodes into latitude and longitude coordinates.
+It was used because:
+- It works well with UK postcodes
+- It does not require an external API key
+- It is lightweight and easy to integrate into Django
+- It avoids relying on paid services such as Google Maps
+- It is suitable for local distance calculations in a student project
+
+### Distance Calculation
+After converting postcodes into coordinates, the system calculates the distance between the customer and producer using latitude and longitude. A Haversine-style distance calculation is used because it estimates the real geographic distance between two coordinate points.
+This allows the system to return the result in miles, for example:
+`This producer is 2.3 miles from your postcode.`
+
+### Product Detail Page Integration
+The product detail page was updated to show a clearer Food Miles section.
+It now displays:
+- Delivery postcode
+- Producer postcode
+- Estimated food miles
+- Whether the producer is within the 20-mile radius
+- A mini map showing both locations
+
+The delivery postcode can be temporarily updated from the product page. This only updates the session and does not change the customer’s saved account postcode.
+
+### Use of Leaflet.js
+Leaflet.js was added to display the interactive mini map.
+It was used because:
+- It is free and open-source
+- It does not require an API key
+- It is lightweight
+- It works well with OpenStreetMap tiles
+- It is simple to use with latitude and longitude data returned by the Django API
+
+The map displays:
+- A marker for the customer postcode
+- A marker for the producer postcode
+- A line between the two locations
+
+### Page Integration
+The basket page was updated so each producer section includes a compact food miles section.
+For each producer, the basket now shows:
+- Producer postcode
+- Mini map
+- Distance from the delivery postcode
+- Whether the producer is within the 20-mile radius
+
+The delivery postcode is only shown and updated at the top of the basket page to avoid repeating the same information inside each producer card.
+This keeps the basket layout cleaner and easier to read.
+
+The checkout page was updated to show food miles before payment.
+Each producer in the order summary now displays their individual food miles.
+Example:
+```markdown
+Producer: Bristol Valley Farm
+Food miles: 2.3 miles from delivery postcode
+```
+The delivery section also displays the total food miles for the whole order.
+Example: `Total food miles: 7.4 miles`
+This helps customers understand the overall travel distance of their order before completing payment.
+
+### Reflection
+Using pgeocode and Leaflet.js allowed the feature to be implemented without paid APIs or external accounts.
+The backend handles postcode lookup and distance calculation, while the frontend focuses on displaying the map and distance information. This separation keeps the feature maintainable and makes it easier to extend later.

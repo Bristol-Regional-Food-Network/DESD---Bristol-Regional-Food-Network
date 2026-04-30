@@ -3,12 +3,14 @@ from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 import math
 import re
+import pgeocode
 
 from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from django.utils.text import slugify
+from django.http import JsonResponse
 
 from products.models import Product
 from .forms import PaymentForm
@@ -55,6 +57,41 @@ def _haversine(lat1, lon1, lat2, lon2):
     )
     return radius_miles * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
 
+def _postcode_coordinates(postcode):
+    if not postcode:
+        return None
+
+    nomi = pgeocode.Nominatim("GB")
+    result = nomi.query_postal_code(postcode)
+
+    if result is None:
+        return None
+
+    if result.latitude != result.latitude or result.longitude != result.longitude:
+        return None
+
+    return {
+        "lat": float(result.latitude),
+        "lng": float(result.longitude),
+    }
+
+
+def _distance_between_postcodes(customer_postcode, producer_postcode):
+    customer_coords = _postcode_coordinates(customer_postcode)
+    producer_coords = _postcode_coordinates(producer_postcode)
+
+    if not customer_coords or not producer_coords:
+        return None
+
+    return round(
+        _haversine(
+            customer_coords["lat"],
+            customer_coords["lng"],
+            producer_coords["lat"],
+            producer_coords["lng"],
+        ),
+        1,
+    )
 
 def _estimate_food_miles(customer_postcode, producer):
     if not customer_postcode or not producer:
@@ -108,13 +145,20 @@ def _build_checkout_groups(basket, customer_postcode=""):
         current_price = Decimal(str(product.active_price))
         subtotal = _money(current_price * quantity)
         producer_name = getattr(product.producer, "display_name", "Unknown Producer")
+
         producer_postcode = getattr(product.producer, "postcode", "")
-        food_miles = _estimate_food_miles(customer_postcode, product.producer)
+        if not producer_postcode:
+            producer_user = getattr(product.producer, "user", None)
+            if producer_user and hasattr(producer_user, "userprofile"):
+                producer_postcode = getattr(producer_user.userprofile, "postcode", "")
+
+        food_miles = _distance_between_postcodes(customer_postcode, producer_postcode)
 
         if producer_name not in groups:
             groups[producer_name] = {
                 "producer_name": producer_name,
                 "producer_key": slugify(producer_name),
+                "producer_postcode": producer_postcode,
                 "items": [],
                 "subtotal": Decimal("0.00"),
                 "payout_amount": Decimal("0.00"),
@@ -322,6 +366,9 @@ def checkout(request):
         return redirect("basket:basket_detail")
 
     customer_postcode = request.session.get("customer_postcode", "")
+    if not customer_postcode and request.user.is_authenticated:
+        customer_postcode = getattr(request.user.userprofile, "postcode", "")
+
     producer_groups, subtotal, total_food_miles, removed_items, changed_items = _build_checkout_groups(
         basket,
         customer_postcode,
@@ -461,6 +508,7 @@ def checkout(request):
                 "grand_total": grand_total,
                 "producer_groups": confirmation_groups,
                 "total_food_miles": total_food_miles,
+                "customer_postcode": customer_postcode,
             })
     else:
         form = PaymentForm(initial=initial_data)
@@ -476,6 +524,7 @@ def checkout(request):
         "delivery_date_errors": delivery_date_errors,
         "submitted_delivery_dates": producer_delivery_dates,
         "total_food_miles": total_food_miles,
+        "customer_postcode": customer_postcode,
     })
 
 
@@ -583,3 +632,36 @@ def reorder_order(request, order_id):
 
     messages.success(request, "Available items from this order were added to your basket.")
     return redirect("basket:basket_detail")
+
+@login_required
+def basket_distance_map_api(request):
+    customer_postcode = request.GET.get("customer_postcode", "").strip()
+    producer_postcode = request.GET.get("producer_postcode", "").strip()
+
+    customer_coords = _postcode_coordinates(customer_postcode)
+    producer_coords = _postcode_coordinates(producer_postcode)
+
+    if not customer_coords or not producer_coords:
+        return JsonResponse({
+            "success": False,
+            "message": "Map could not be calculated."
+        })
+
+    distance_miles = round(
+        _haversine(
+            customer_coords["lat"],
+            customer_coords["lng"],
+            producer_coords["lat"],
+            producer_coords["lng"],
+        ),
+        1,
+    )
+
+    return JsonResponse({
+        "success": True,
+        "customer_postcode": customer_postcode,
+        "producer_postcode": producer_postcode,
+        "customer": customer_coords,
+        "producer": producer_coords,
+        "distance_miles": distance_miles,
+    })

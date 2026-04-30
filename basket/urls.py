@@ -10,6 +10,8 @@ urlpatterns = [
     path("remove/<int:product_id>/", views.basket_remove, name="basket_remove"),
     path("checkout/", views.checkout, name="checkout"),
 
+    path("distance-map/", views.basket_distance_map_api, name="basket_distance_map_api"),
+    
     # Order history
     path("orders/", views.order_history, name="order_history"),
     path("orders/<int:order_id>/", views.order_detail, name="order_detail"),
