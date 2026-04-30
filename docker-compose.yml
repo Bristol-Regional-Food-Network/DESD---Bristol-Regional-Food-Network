@@ -15,6 +15,13 @@ services:
       sh -c "python manage.py migrate &&
              python manage.py runserver 0.0.0.0:8000"
 
+  ai_service:
+    build: ./ai_service
+    container_name: ai_service
+    ports:
+      - "5001:5001"
+    restart: unless-stopped
+    
   db:
     image: postgres:16
     environment:

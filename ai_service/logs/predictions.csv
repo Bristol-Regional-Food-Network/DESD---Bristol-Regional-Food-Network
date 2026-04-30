@@ -1,0 +1,8 @@
+timestamp,image_path,predicted_label,fresh_probability,rotten_probability,grade,action
+2026-04-15 18:15:09,dataset/fresh/fef5206a-b9ac-4724-9a18-16502b73d392.png,fresh,0.9973,0.0027,A,Sell at full price
+2026-04-16 17:26:50,dataset/fresh/0a0a25fe-d5c8-4894-850a-0b9fcf5090bc.png,fresh,0.5612,0.4388,C,Apply discount or manual review
+2026-04-16 23:09:35,temp_00008217-e4ce-4099-a105-99da0aa0048e.png,fresh,0.9932,0.0068,B,Apply discount
+2026-04-16 23:12:52,temp_0014b311-ba8b-4794-9f2a-fa17588bdd23.png,fresh,0.9989,0.0011,B,Apply discount
+2026-04-16 23:27:24,temp_000121b3-aa24-4efb-b2dc-078a4803aaf0.png,rotten,0.0,1.0,,Remove from inventory
+2026-04-28 20:07:05,temp_freshCarrot_1.jpeg,fresh,1.0,0.0,C,Apply discount or manual review
+2026-04-28 20:33:27,C:\Git\DESD-Updated\DESD---Bristol-Regional-Food-Network\ai_service\temp_uploads\2971fe76708b4c7ebd2a23652af42c99.jpg,fresh,0.9987,0.0013,B,Apply discount
