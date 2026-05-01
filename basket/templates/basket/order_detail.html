@@ -1,0 +1,72 @@
+{% extends "base/base.html" %}
+
+{% block title %}Order #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <a href="{% url 'basket:order_history' %}" class="btn btn-outline-secondary btn-sm mb-3">
+        ← Back to Order History
+    </a>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h1 class="h3 mb-3">Order #{{ order.id }}</h1>
+
+            <p><strong>Order Date:</strong> {{ order.created_at }}</p>
+            <p><strong>Delivery Date:</strong> {{ order.delivery_date }}</p>
+            <p><strong>Status:</strong> {{ order.get_status_display }}</p>
+            <p><strong>Delivery Address:</strong> {{ order.billing_address }}, {{ order.city }}, {{ order.postcode }}, {{ order.country }}</p>
+            <p><strong>Payment:</strong> {{ masked_payment }}</p>
+            <p><strong>Payment Reference:</strong> {{ order.payment_reference }}</p>
+
+            <hr>
+
+            <h2 class="h5 mb-3">Items</h2>
+
+            {% if order.items.all %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Producer</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items.all %}
+                                <tr>
+                                    <td>
+                                        {{ item.product_name }}
+                                        {% if item.product and order.status == 'fulfilled' %}
+                                            <div class="mt-2">
+                                                <a href="{% url 'products:product_detail' item.product.id %}" class="btn btn-sm btn-outline-primary">
+                                                    Write Review
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.producer_name }}</td>
+                                    <td>{{ item.quantity }}</td>
+                                    <td>£{{ item.price|floatformat:2 }}</td>
+                                    <td>£{{ item.subtotal|floatformat:2 }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="fw-bold">Order Total: £{{ order.total_amount|floatformat:2 }}</p>
+
+                <a href="{% url 'basket:reorder_order' order.id %}" class="btn btn-dark">
+                    Reorder This Order
+                </a>
+            {% else %}
+                <p class="text-muted">No items found for this order.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+  {% include 'admin/management_nav.html' %}
+  <h1>Admin Dashboard</h1>
+  <ul>
+    <li>Total customers: {{ total_users }}</li>
+    <li>Total producers: {{ total_producers }}</li>
+    <li>Total orders: {{ total_orders }}</li>
+  </ul>
+
+  <h2>Recent orders</h2>
+  <table class="admin-table">
+    <thead>
+      <tr><th>#</th><th>Customer</th><th>Amount</th><th>Status</th><th>When</th></tr>
+    </thead>
+    <tbody>
+    {% for o in recent_orders %}
+      <tr>
+        <td><a href="{% url 'admin_order_detail' o.pk %}">{{ o.id }}</a></td>
+        <td>{{ o.customer.username }}</td>
+        <td>{{ o.total_amount }}</td>
+        <td>{{ o.get_status_display }}</td>
+        <td>{{ o.created_at }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="5">No orders yet</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+
+{% endblock %}

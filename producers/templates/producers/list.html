@@ -1,0 +1,23 @@
+{% extends "base/base.html" %}
+{% block title %}Producers{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Producers</h1>
+
+{% if producers %}
+  <div class="list-group">
+    {% for p in producers %}
+      <a class="list-group-item list-group-item-action"
+         href="{% url 'producers:detail' p.id %}">
+        <div class="d-flex justify-content-between">
+          <strong>{{ p.display_name }}</strong>
+          {% if p.location %}<span class="text-muted">{{ p.location }}</span>{% endif %}
+        </div>
+        {% if p.bio %}<div class="small text-muted mt-1">{{ p.bio|truncatechars:120 }}</div>{% endif %}
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="text-muted">No producers available yet.</p>
+{% endif %}
+{% endblock %}

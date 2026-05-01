@@ -1,0 +1,112 @@
+/* ---------- Global Styles ---------- */
+       
+body {
+    background-color: #f8f9fa;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
+    color: #1e1e1e;
+}
+
+/* Page spacing */
+main.container {
+    min-height: 70vh;
+}
+
+.navbar-brand img {
+    height: 70px;
+    width: auto;
+}
+
+/* ---------- Navbar ---------- */
+
+.navbar {
+    background: linear-gradient(90deg, #1f3b2d, #2f6b45) !important;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+}
+
+.navbar-brand {
+    font-size: 1.25rem;
+    letter-spacing: 0.4px;
+}
+
+.navbar .nav-link {
+    font-weight: 500;
+}
+
+.navbar .nav-link:hover {
+    opacity: 0.9;
+}
+
+
+/* ---------- Buttons ---------- */
+
+.btn {
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-warning {
+    background-color: #f4b400;
+    border: none;
+    font-weight: 600;
+}
+
+.btn-warning:hover {
+    background-color: #e3a400;
+}
+
+.btn-outline-light:hover {
+    background-color: white;
+    color: #1f3b2d;
+}
+
+
+/* ---------- Cards (for product pages later) ---------- */
+
+.card {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    transition: 0.2s ease;
+}
+
+
+/* ---------- Forms ---------- */
+
+input,
+textarea,
+select {
+    border-radius: 8px !important;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(47,107,69,0.2);
+    border-color: #2f6b45;
+}
+
+
+/* ---------- Footer ---------- */
+
+footer {
+    background-color: #ffffff;
+}
+
+footer .text-muted {
+    font-size: 0.9rem;
+}
+
+
+/* ---------- Utility Styles ---------- */
+
+.section-title {
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.text-muted {
+    color: #6c757d !important;
+}

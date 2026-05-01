@@ -1,0 +1,337 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ product.name }} | BRFN{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+  <div class="mb-4">
+    <a class="btn btn-outline-dark btn-sm" href="{% url 'products:product_list' %}">
+      ← Back to Products
+    </a>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+        <div>
+          <h1 class="h3 mb-1">{{ product.name }}</h1>
+          <div class="text-muted">
+            Producer: {{ product.producer.display_name }}
+          </div>
+          {% if product.producer.location %}
+            <div class="text-muted small">
+              Farm location: {{ product.producer.location }}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="text-end">
+          {% if product.is_surplus_active %}
+            <div class="mb-1">
+              <span class="badge bg-warning text-dark">{{ product.surplus_discount_percent }}% OFF</span>
+            </div>
+            <span class="badge text-bg-light border fs-6">
+              <span class="text-muted text-decoration-line-through me-2">£{{ product.price|floatformat:2 }}</span>
+              £{{ product.active_price|floatformat:2 }} per {{ product.unit_display }}
+            </span>
+          {% elif product.discount_percent > 0 %}
+            <div class="mb-1">
+              <span class="badge bg-danger">{{ product.discount_percent }}% OFF</span>
+            </div>
+            <span class="badge text-bg-light border fs-6">
+              <span class="text-muted text-decoration-line-through me-2">£{{ product.price|floatformat:2 }}</span>
+              £{{ product.active_price|floatformat:2 }} per {{ product.unit_display }}
+            </span>
+          {% else %}
+            <span class="badge text-bg-light border fs-6">
+              £{{ product.active_price|floatformat:2 }} per {{ product.unit_display }}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+
+      <hr>
+
+      <div class="row g-4">
+        <div class="col-lg-7">
+          <h2 class="h6">Description</h2>
+          <p class="text-muted">
+            {{ product.description|default:"No description provided." }}
+          </p>
+
+          <div class="mt-3">
+            <p class="mb-2"><strong>Status:</strong> {{ product.customer_status }}</p>
+
+            <p class="mb-2">
+              <strong>Organic Certification:</strong>
+              {% if product.is_organic %}
+                <span class="badge bg-success ms-1">Certified Organic</span>
+              {% else %}
+                <span class="badge bg-secondary ms-1">Not Certified</span>
+              {% endif %}
+            </p>
+
+            {% if product.season_range_display %}
+              <p class="mb-2 text-muted">
+                <strong>Season:</strong> {{ product.season_range_display }}
+              </p>
+            {% endif %}
+
+            {% if product.best_before_date %}
+              <p class="mb-2 text-danger">
+                <strong>Best before:</strong> {{ product.best_before_date }}
+              </p>
+            {% endif %}
+
+            {% if product.surplus_note %}
+              <p class="mb-2 text-muted">
+                <strong>Surplus note:</strong> {{ product.surplus_note }}
+              </p>
+            {% endif %}
+
+            {% if product.is_surplus_active %}
+              <p class="mb-2 text-danger">
+                <strong>{{ product.surplus_time_remaining }}</strong>
+              </p>
+            {% endif %}
+
+            <p class="mb-0 text-muted">
+              <strong>Stock:</strong> {{ product.stock }}
+            </p>
+          </div>
+        </div>
+
+        <div class="col-lg-5">
+          <div class="border rounded p-3 bg-light">
+            <h2 class="h6 mb-3">Food Miles</h2>
+
+            <form method="get" class="mb-3">
+              <label for="postcode" class="form-label">Delivery postcode</label>
+              <div class="d-flex gap-2">
+                <input
+                  type="text"
+                  id="postcode"
+                  name="postcode"
+                  class="form-control"
+                  value="{{ customer_postcode }}"
+                  placeholder="e.g. BS1 5JG"
+                >
+                <button type="submit" class="btn btn-outline-dark">Update</button>
+              </div>
+            </form>
+
+            {% if producer_postcode %}
+              <p class="mb-2">
+                <strong>Producer postcode:</strong> {{ producer_postcode }}
+              </p>
+            {% else %}
+              <p class="mb-2 text-muted">
+                <strong>Producer postcode:</strong> Not available
+              </p>
+            {% endif %}
+
+            {% if food_miles is not None %}
+              <div class="fw-semibold mb-2">Estimated food miles: {{ food_miles }} miles</div>
+
+              {% if within_radius %}
+                <span class="badge bg-success">Within 20-mile radius</span>
+              {% else %}
+                <span class="badge bg-danger">Outside 20-mile radius</span>
+              {% endif %}
+
+              <div class="text-muted small mt-2">
+                Calculated from your delivery postcode to the producer location.
+              </div>
+            {% else %}
+              <div class="text-muted small">
+                Enter your delivery postcode to estimate the distance from this producer.
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if product.is_visible_to_customers %}
+        <form method="post" action="{% url 'basket:basket_add' product.id %}" class="mt-4">
+          {% csrf_token %}
+
+          <div class="d-flex flex-wrap align-items-center gap-3">
+            <label for="quantity" class="fw-semibold mb-0">Quantity</label>
+
+            <div class="d-flex align-items-center gap-2">
+              <button
+                type="button"
+                class="btn btn-outline-dark btn-sm"
+                onclick="decreaseQty()"
+              >
+                -
+              </button>
+
+              <input
+                type="text"
+                id="quantity"
+                name="quantity"
+                value="1"
+                class="form-control text-center"
+                style="width: 80px;"
+              >
+
+              <button
+                type="button"
+                class="btn btn-outline-dark btn-sm"
+                onclick="increaseQty()"
+              >
+                +
+              </button>
+            </div>
+
+            <button type="submit" class="btn btn-dark btn-sm">
+              Add to Basket
+            </button>
+
+            <a class="btn btn-outline-dark btn-sm" href="{% url 'basket:basket_detail' %}">
+              View Basket
+            </a>
+
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'save_product' product.id %}">
+              Save
+            </a>
+          </div>
+        </form>
+      {% else %}
+        <div class="alert alert-warning mt-4 mb-0">
+          This product is currently not available to order.
+        </div>
+      {% endif %}
+
+      <div class="card shadow-sm mt-4">
+        <div class="card-body">
+          <h2 class="h4 mb-3">Customer Reviews</h2>
+
+          <p class="mb-3">
+            <strong>Average rating:</strong>
+            {{ average_rating|floatformat:1 }}/5
+            <span class="text-muted">({{ reviews|length }} review{{ reviews|length|pluralize }})</span>
+          </p>
+
+          {% if can_review %}
+            <div class="border rounded p-3 mb-4 bg-light">
+              <h3 class="h6">Write a Review</h3>
+              <form method="post" action="{% url 'products:submit_review' product.id %}">
+                {% csrf_token %}
+                <div class="mb-3">
+                  <label class="form-label">Star Rating (1-5)</label>
+                  {{ review_form.rating }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Review Title</label>
+                  {{ review_form.title }}
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Review Text</label>
+                  {{ review_form.review_text }}
+                </div>
+                <div class="form-check mb-3">
+                  {{ review_form.is_anonymous }}
+                  <label class="form-check-label" for="{{ review_form.is_anonymous.id_for_label }}">
+                    Post anonymously
+                  </label>
+                </div>
+                <button type="submit" class="btn btn-dark">Submit Review</button>
+              </form>
+            </div>
+          {% elif existing_review %}
+            <div class="alert alert-info">
+              You have already reviewed this product.
+            </div>
+          {% elif request.user.is_authenticated %}
+            <div class="alert alert-warning">
+              You can only review this product after it has been fulfilled/delivered in one of your orders.
+            </div>
+          {% else %}
+            <div class="alert alert-secondary">
+              Please log in to leave a review.
+            </div>
+          {% endif %}
+
+          {% if reviews %}
+            {% for review in reviews %}
+              <div class="border rounded p-3 mb-3">
+                <div class="d-flex justify-content-between flex-wrap gap-2">
+                  <div>
+                    <strong>
+                      {% if review.is_anonymous %}
+                        Anonymous
+                      {% else %}
+                        {{ review.customer.username }}
+                      {% endif %}
+                    </strong>
+                    <span class="badge bg-success ms-2">Verified Purchase</span>
+                  </div>
+                  <small class="text-muted">{{ review.created_at|date:"d M Y" }}</small>
+                </div>
+
+                <div class="mt-2">
+                  <strong>{{ review.rating }}/5 stars</strong>
+                </div>
+
+                <h3 class="h6 mt-2 mb-1">{{ review.title }}</h3>
+                <p class="mb-2">{{ review.review_text }}</p>
+
+                {% if review.producer_reply %}
+                  <div class="bg-light border rounded p-2 mt-2">
+                    <strong>Producer reply:</strong>
+                    <p class="mb-0">{{ review.producer_reply }}</p>
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted mb-0">No reviews yet for this product.</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function increaseQty() {
+    const input = document.getElementById("quantity");
+    let value = parseInt(input.value);
+
+    if (isNaN(value) || value < 1) {
+      value = 1;
+    }
+
+    input.value = value + 1;
+  }
+
+  function decreaseQty() {
+    const input = document.getElementById("quantity");
+    let value = parseInt(input.value);
+
+    if (isNaN(value) || value <= 1) {
+      input.value = "1";
+      return;
+    }
+
+    input.value = value - 1;
+  }
+
+  const basketForm = document.querySelector('form[action*="basket"]');
+  if (basketForm) {
+    basketForm.addEventListener("submit", function () {
+      const input = document.getElementById("quantity");
+
+      if (input.value === "-" || input.value === "" || isNaN(parseInt(input.value)) || parseInt(input.value) < 1) {
+        input.value = "1";
+      }
+    });
+  }
+</script>
+
+{% endblock %}

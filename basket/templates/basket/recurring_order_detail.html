@@ -1,0 +1,160 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ template.name }} | Recurring Orders{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <a href="{% url 'basket:recurring_orders_list' %}" class="text-decoration-none">
+        &larr; Back to Recurring Orders
+    </a>
+
+    <div class="d-flex justify-content-between align-items-center mt-2 mb-3 flex-wrap gap-2">
+        <div>
+            <h1 class="h3 mb-1">{{ template.name }}</h1>
+            <p class="text-muted mb-0">
+                {{ template.get_frequency_display }} ·
+                Order on {{ template.get_order_day_display }} ·
+                Deliver on {{ template.get_delivery_day_display }}
+            </p>
+        </div>
+        <div>
+            {% if template.status == 'active' %}
+                <span class="badge bg-success fs-6">Active</span>
+            {% elif template.status == 'paused' %}
+                <span class="badge bg-warning text-dark fs-6">Paused</span>
+            {% else %}
+                <span class="badge bg-secondary fs-6">Cancelled</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if unavailable_items %}
+        <div class="alert alert-warning">
+            <strong>Some products are currently unavailable:</strong>
+            {{ unavailable_items|join:", " }}.
+            They will be skipped on the next scheduled order until they become available again.
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Template Items</h2>
+
+                    {% for producer_name, group_items in producer_groups.items %}
+                        <div class="border rounded p-3 mb-3">
+                            <div class="text-muted small mb-1">Producer</div>
+                            <h3 class="h6 mb-3">{{ producer_name }}</h3>
+
+                            {% for item in group_items %}
+                                <div class="d-flex justify-content-between border-bottom py-2">
+                                    <div>
+                                        <strong>{{ item.product_name }}</strong><br>
+                                        <span class="text-muted small">
+                                            £{{ item.price|floatformat:2 }} per {{ item.unit_display }} ×
+                                            {% if item.next_quantity_override is not None %}
+                                                <span class="text-warning">
+                                                    {{ item.next_quantity_override }}
+                                                    <small>(next only)</small>
+                                                </span>
+                                            {% else %}
+                                                {{ item.quantity }}
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                    <div>£{{ item.line_total|floatformat:2 }}</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+
+                    <div class="d-flex justify-content-between mt-3 pt-2 border-top">
+                        <span><strong>Template total</strong></span>
+                        <strong>£{{ template.template_total|floatformat:2 }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Schedule</h2>
+                    <p class="mb-1">
+                        <strong>Next order date:</strong>
+                        {{ template.next_run_date|date:"l, d M Y" }}
+                    </p>
+                    <p class="mb-3">
+                        <strong>Next delivery date:</strong>
+                        {{ template.next_delivery_date|date:"l, d M Y" }}
+                    </p>
+                    <p class="text-muted small">
+                        We'll email you a reminder before each order is placed so you can review
+                        or modify it.
+                    </p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Payment Snapshot</h2>
+                    <p class="mb-1"><strong>Cardholder:</strong> {{ template.cardholder_name }}</p>
+                    <p class="mb-1"><strong>Card:</strong> **** **** **** {{ template.card_last4 }}</p>
+                    <p class="mb-0">
+                        <strong>Delivery to:</strong>
+                        {{ template.billing_address }}, {{ template.city }}, {{ template.postcode }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Manage</h2>
+
+                    <div class="d-grid gap-2">
+                        {% if template.status != 'cancelled' %}
+                            <a href="{% url 'basket:recurring_order_modify' template.id %}"
+                               class="btn btn-dark">
+                                Modify Next Order
+                            </a>
+
+                            <form method="post" action="{% url 'basket:recurring_order_pause' template.id %}">
+                                {% csrf_token %}
+                                {% if template.status == 'active' %}
+                                    <button type="submit" class="btn btn-warning w-100">
+                                        Pause Recurring Order
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-success w-100">
+                                        Resume Recurring Order
+                                    </button>
+                                {% endif %}
+                            </form>
+
+                            <form method="post"
+                                  action="{% url 'basket:recurring_order_cancel' template.id %}"
+                                  onsubmit="return confirm('Cancel this recurring order? This action cannot be undone.');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger w-100">
+                                    Cancel Recurring Order
+                                </button>
+                            </form>
+                        {% else %}
+                            <p class="text-muted mb-0">
+                                This recurring order has been cancelled.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

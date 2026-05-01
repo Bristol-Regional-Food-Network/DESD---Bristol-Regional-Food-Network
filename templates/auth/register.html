@@ -1,0 +1,124 @@
+{% extends "base/base.html" %}
+{% block title %}Register{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7 col-lg-6">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        <h1 class="h4 mb-3">Create an account</h1>
+        <p class="text-muted mb-4">Choose your role and register.</p>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+              {{ form.non_field_errors }}
+            </div>
+          {% endif %}
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.username.id_for_label }}">Username</label>
+            {{ form.username }}
+            {% if form.username.errors %}
+              <div class="text-danger small">{{ form.username.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+              <div class="text-danger small">{{ form.email.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.password.id_for_label }}">Password</label>
+            {{ form.password }}
+            {% if form.password.errors %}
+              <div class="text-danger small">{{ form.password.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.role.id_for_label }}">Role</label>
+            {{ form.role }}
+            {% if form.role.errors %}
+              <div class="text-danger small">{{ form.role.errors }}</div>
+            {% endif %}
+          </div>
+
+          <div id="extra-fields">
+            
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.address.id_for_label }}">Address</label>
+              {{ form.address }}
+              {% if form.address.errors %}
+                <div class="text-danger small">{{ form.address.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.postcode.id_for_label }}">Postcode</label>
+              {{ form.postcode }}
+              {% if form.postcode.errors %}
+                <div class="text-danger small">{{ form.postcode.errors }}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3" id="farm-field">
+              <label class="form-label" for="{{ form.farm_name.id_for_label }}">Farm Name</label>
+              {{ form.farm_name }}
+              {% if form.farm_name.errors %}
+                <div class="text-danger small">{{ form.farm_name.errors }}</div>
+              {% endif %}
+            </div>
+
+          </div>
+
+
+          <button class="btn btn-warning w-100" type="submit">Create account</button>
+        </form>
+
+        <div class="mt-3 small">
+          Already have an account? <a href="{% url 'login' %}">Login</a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const roleField = document.getElementById("id_role");
+    const extraFields = document.getElementById("extra-fields");
+    const farmField = document.getElementById("farm-field");
+
+    function updateFields() {
+        const role = roleField.value;
+
+        // Customer and Producer shows address and postcode
+        if (role === "customer" || role === "producer") {
+            extraFields.style.display = "block";
+
+            // Only producer shows farm name
+            if (role === "producer") {
+                farmField.style.display = "block";
+            } else {
+                farmField.style.display = "none";
+            }
+
+        } else {
+            // AI Engineer and Manager hide all extra fields
+            extraFields.style.display = "none";
+        }
+    }
+
+    roleField.addEventListener("change", updateFields);
+    updateFields();
+});
+</script>
+{% endblock %}

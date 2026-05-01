@@ -1,0 +1,406 @@
+{% extends "base/base.html" %}
+
+{% block title %}Producer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  {% if producer %}
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+      <div>
+        <h1 class="mb-2">{{ producer.display_name }}</h1>
+        <p class="text-muted mb-0">Manage your products by section, season, and surplus deals.</p>
+      </div>
+
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-success" href="{% url 'products:add' %}">Add product</a>
+        <a class="btn btn-outline-primary" href="{% url 'producers:producer_reports' %}">Producer Reports</a>
+        <a class="btn btn-outline-dark" href="{% url 'producers:producer_orders' %}">Orders</a>
+      </div>
+    </div>
+  {% else %}
+    <h1 class="mb-3">Producer Dashboard</h1>
+  {% endif %}
+
+  {% if upcoming_season_products %}
+    <div class="alert alert-info">
+      <strong>Season reminder:</strong>
+      The following products are due to become available next month:
+      <ul class="mb-0 mt-2">
+        {% for p in upcoming_season_products %}
+          <li>{{ p.name }}{% if p.season_range_display %} ({{ p.season_range_display }}){% endif %}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  {% if not my_products %}
+    <p class="text-muted">No products yet.</p>
+  {% endif %}
+
+  <div class="mb-5">
+    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#E67E22;">
+      <strong>Surplus Deals</strong>
+    </div>
+
+    {% if surplus_products %}
+      <div class="row g-3">
+        {% for p in surplus_products %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4 border-warning">
+              <div class="card-body d-flex flex-column">
+                <h5 class="card-title">{{ p.name }}</h5>
+                <p class="small mb-1"><strong>Stock:</strong> {{ p.stock }}</p>
+                <p class="small mb-1"><strong>Deal:</strong> {{ p.surplus_discount_percent }}% off</p>
+                {% if p.surplus_expires_at %}
+                  <p class="small text-danger mb-1"><strong>Expires:</strong> {{ p.surplus_expires_at }}</p>
+                {% endif %}
+                {% if p.surplus_note %}
+                  <p class="small text-muted">{{ p.surplus_note|truncatechars:80 }}</p>
+                {% endif %}
+                {% if p.best_before_date %}
+                  <p class="small text-danger"><strong>Best before:</strong> {{ p.best_before_date }}</p>
+                {% endif %}
+
+                {% if p.ai_predicted_label %}
+                  <hr class="my-3">
+
+                  <div class="small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <strong>AI:</strong>
+
+                      {% if p.ai_predicted_label == "fresh" %}
+                        <span class="badge bg-success">Fresh</span>
+                      {% elif p.ai_predicted_label == "rotten" %}
+                        <span class="badge bg-danger">Rotten</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
+                      {% endif %}
+
+                      {% if p.ai_grade == "A" %}
+                        <span class="badge bg-success">Grade A</span>
+                      {% elif p.ai_grade == "B" %}
+                        <span class="badge bg-warning text-dark">Grade B</span>
+                      {% elif p.ai_grade == "C" %}
+                        <span class="badge bg-danger">Grade C</span>
+                      {% endif %}
+                    </div>
+
+                    {% if p.ai_action %}
+                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
+                    {% endif %}
+
+                    {% if p.ai_colour_score %}
+                      <p class="small mb-1">
+                        <strong>Scores:</strong>
+                        Colour {{ p.ai_colour_score }},
+                        Size {{ p.ai_size_score }},
+                        Ripeness {{ p.ai_ripeness_score }}
+                      </p>
+                    {% endif %}
+
+                    {% if p.ai_explanation %}
+                      <details class="mt-2">
+                        <summary class="small text-primary">View explanation</summary>
+                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
+                      </details>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="mt-auto d-flex gap-2">
+                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'products:delete' p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No surplus deals yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="mb-5">
+    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#4CAF50;">
+      <strong>Seasonal Items</strong>
+    </div>
+
+    {% if seasonal_products %}
+      <div class="row g-3">
+        {% for p in seasonal_products %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h5 class="card-title mb-0">{{ p.name }}</h5>
+                  <span class="badge bg-secondary">£{{ p.price }}</span>
+                </div>
+
+                <p class="small mb-1"><strong>Stock:</strong> {{ p.stock }}</p>
+                <p class="small mb-1"><strong>Status:</strong> {{ p.customer_status }}</p>
+
+                {% if p.season_range_display %}
+                  <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
+                {% endif %}
+
+                {% if p.ai_predicted_label %}
+                  <hr class="my-3">
+
+                  <div class="small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <strong>AI:</strong>
+
+                      {% if p.ai_predicted_label == "fresh" %}
+                        <span class="badge bg-success">Fresh</span>
+                      {% elif p.ai_predicted_label == "rotten" %}
+                        <span class="badge bg-danger">Rotten</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
+                      {% endif %}
+
+                      {% if p.ai_grade == "A" %}
+                        <span class="badge bg-success">Grade A</span>
+                      {% elif p.ai_grade == "B" %}
+                        <span class="badge bg-warning text-dark">Grade B</span>
+                      {% elif p.ai_grade == "C" %}
+                        <span class="badge bg-danger">Grade C</span>
+                      {% endif %}
+                    </div>
+
+                    {% if p.ai_action %}
+                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
+                    {% endif %}
+
+                    {% if p.ai_colour_score %}
+                      <p class="small mb-1">
+                        <strong>Scores:</strong>
+                        Colour {{ p.ai_colour_score }},
+                        Size {{ p.ai_size_score }},
+                        Ripeness {{ p.ai_ripeness_score }}
+                      </p>
+                    {% endif %}
+
+                    {% if p.ai_explanation %}
+                      <details class="mt-2">
+                        <summary class="small text-primary">View explanation</summary>
+                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
+                      </details>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="mt-3 d-flex gap-2">
+                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'products:delete' p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No seasonal items yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="mb-5">
+    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#FF5252;">
+      <strong>Discounted Items</strong>
+    </div>
+
+    {% if discounted_products %}
+      <div class="row g-3">
+        {% for p in discounted_products %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4 position-relative">
+              {% if p.discount_percent > 0 %}
+                <span class="badge bg-danger position-absolute top-0 start-0 m-2">
+                  {{ p.discount_percent }}% OFF
+                </span>
+              {% endif %}
+
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2 mt-3">
+                  <h5 class="card-title mb-0">{{ p.name }}</h5>
+                  <span class="badge bg-secondary">£{{ p.price }}</span>
+                </div>
+
+                <p class="text-muted small mb-2">
+                  {{ p.description|default:"No description provided."|truncatechars:100 }}
+                </p>
+
+                {% if p.discount_percent > 0 %}
+                  <p class="mb-2">
+                    <span class="text-muted text-decoration-line-through">£{{ p.price }}</span>
+                    <span class="fw-bold text-danger ms-2">£{{ p.discounted_price|floatformat:2 }}</span>
+                  </p>
+                {% endif %}
+
+                <p class="small mb-1"><strong>Stock:</strong> {{ p.stock }}</p>
+                <p class="small mb-1"><strong>Status:</strong> {{ p.customer_status }}</p>
+
+                {% if p.season_range_display %}
+                  <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
+                {% endif %}
+
+                {% if p.ai_predicted_label %}
+                  <hr class="my-3">
+
+                  <div class="small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <strong>AI:</strong>
+
+                      {% if p.ai_predicted_label == "fresh" %}
+                        <span class="badge bg-success">Fresh</span>
+                      {% elif p.ai_predicted_label == "rotten" %}
+                        <span class="badge bg-danger">Rotten</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
+                      {% endif %}
+
+                      {% if p.ai_grade == "A" %}
+                        <span class="badge bg-success">Grade A</span>
+                      {% elif p.ai_grade == "B" %}
+                        <span class="badge bg-warning text-dark">Grade B</span>
+                      {% elif p.ai_grade == "C" %}
+                        <span class="badge bg-danger">Grade C</span>
+                      {% endif %}
+                    </div>
+
+                    {% if p.ai_action %}
+                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
+                    {% endif %}
+
+                    {% if p.ai_colour_score %}
+                      <p class="small mb-1">
+                        <strong>Scores:</strong>
+                        Colour {{ p.ai_colour_score }},
+                        Size {{ p.ai_size_score }},
+                        Ripeness {{ p.ai_ripeness_score }}
+                      </p>
+                    {% endif %}
+
+                    {% if p.ai_explanation %}
+                      <details class="mt-2">
+                        <summary class="small text-primary">View explanation</summary>
+                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
+                      </details>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="mt-3 d-flex gap-2">
+                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'products:delete' p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No discounted items yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="mb-5">
+    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#2196F3;">
+      <strong>All Items</strong>
+    </div>
+
+    {% if all_products %}
+      <div class="row g-3">
+        {% for p in all_products %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4">
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h5 class="card-title mb-0">{{ p.name }}</h5>
+                  <span class="badge bg-secondary">£{{ p.price }}</span>
+                </div>
+
+                <p class="text-muted small mb-2">
+                  {{ p.description|default:"No description provided."|truncatechars:100 }}
+                </p>
+
+                <p class="small mb-1"><strong>Stock:</strong> {{ p.stock }}</p>
+                <p class="small mb-1"><strong>Status:</strong> {{ p.customer_status }}</p>
+
+                {% if p.season_range_display %}
+                  <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
+                {% endif %}
+
+                {% if p.ai_predicted_label %}
+                  <hr class="my-3">
+
+                  <div class="small">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                      <strong>AI:</strong>
+
+                      {% if p.ai_predicted_label == "fresh" %}
+                        <span class="badge bg-success">Fresh</span>
+                      {% elif p.ai_predicted_label == "rotten" %}
+                        <span class="badge bg-danger">Rotten</span>
+                      {% else %}
+                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
+                      {% endif %}
+
+                      {% if p.ai_grade == "A" %}
+                        <span class="badge bg-success">Grade A</span>
+                      {% elif p.ai_grade == "B" %}
+                        <span class="badge bg-warning text-dark">Grade B</span>
+                      {% elif p.ai_grade == "C" %}
+                        <span class="badge bg-danger">Grade C</span>
+                      {% endif %}
+                    </div>
+
+                    {% if p.ai_action %}
+                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
+                    {% endif %}
+
+                    {% if p.ai_colour_score %}
+                      <p class="small mb-1">
+                        <strong>Scores:</strong>
+                        Colour {{ p.ai_colour_score }},
+                        Size {{ p.ai_size_score }},
+                        Ripeness {{ p.ai_ripeness_score }}
+                      </p>
+                    {% endif %}
+
+                    {% if p.ai_explanation %}
+                      <details class="mt-2">
+                        <summary class="small text-primary">View explanation</summary>
+                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
+                      </details>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                <div class="mt-3 d-flex gap-2">
+                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'products:delete' p.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No regular items yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
