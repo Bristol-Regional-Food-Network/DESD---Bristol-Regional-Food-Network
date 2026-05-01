@@ -1,43 +1,150 @@
 import os
-import json
-import importlib.util
+import subprocess
+import sys
 
+import joblib
+import numpy as np
 import pandas as pd
-from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
+from django.shortcuts import redirect, render
 from django.views.decorators.http import require_GET
 
-from users.decorators import role_required
 from products.models import Product
+from users.decorators import role_required
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_OUTPUT_PATH = os.path.join(BASE_DIR, "hybrid_recommendations.csv")
-RECOMMENDER_PATH = os.path.join(BASE_DIR, "hybrid_recommender.py")
-SUMMARY_PATH = os.path.join(BASE_DIR, "hybrid_model_summary.json")
-BESTSELLER_PATH = os.path.join(BASE_DIR, "bestseller_recommendations.csv")
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+TASK_DIR = os.path.join(APP_DIR, "task")
+
+DATA_PATH = os.path.join(TASK_DIR, "orders_dataset.csv")
+MODEL_PATH = os.path.join(TASK_DIR, "rf_model.pkl")
+TARGET_ENCODER_PATH = os.path.join(TASK_DIR, "target_encoder.pkl")
+FEATURE_ENCODERS_PATH = os.path.join(TASK_DIR, "feature_encoders.pkl")
+TRAINING_SCRIPT_PATH = os.path.join(TASK_DIR, "random_forest_model.py")
+
+FEATURES = [
+    "price_per_unit",
+    "category_enc",
+    "unit_enc",
+    "is_organic",
+    "line_total",
+    "section_enc",
+    "quantity",
+    "avg_spend",
+    "organic_rate",
+    "fav_category_enc",
+    "total_orders",
+    "month",
+    "delivery_days",
+    "dayofweek",
+    "order_status_enc",
+]
 
 
-def _load_recommender():
-    """Dynamically load hybrid_recommender.py from project root."""
-    spec = importlib.util.spec_from_file_location("hybrid_recommender", RECOMMENDER_PATH)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+def _task_files_exist():
+    return all(os.path.exists(path) for path in [
+        DATA_PATH,
+        MODEL_PATH,
+        TARGET_ENCODER_PATH,
+        FEATURE_ENCODERS_PATH,
+    ])
+
+
+def _prepare_dataset():
+    df = pd.read_csv(DATA_PATH)
+
+    df["delivery_days"] = (
+        pd.to_datetime(df["delivery_date"]) - pd.to_datetime(df["order_date"])
+    ).dt.days
+    df["month"] = pd.to_datetime(df["order_date"]).dt.month
+    df["dayofweek"] = pd.to_datetime(df["order_date"]).dt.dayofweek
+
+    df["is_organic"] = (
+        df["is_organic"].astype(str).str.lower().map({"true": 1, "false": 0})
+    )
+
+    user_stats = df.groupby("user_id").agg(
+        total_orders=("order_id", "nunique"),
+        avg_spend=("line_total", "mean"),
+        organic_rate=("is_organic", "mean"),
+    ).reset_index()
+    df = df.merge(user_stats, on="user_id", how="left")
+
+    fav_cat = (
+        df.groupby(["user_id", "category"])
+        .size()
+        .reset_index(name="count")
+        .sort_values("count", ascending=False)
+        .drop_duplicates("user_id")
+        .rename(columns={"category": "fav_category"})[["user_id", "fav_category"]]
+    )
+    df = df.merge(fav_cat, on="user_id", how="left")
+
+    encoders = joblib.load(FEATURE_ENCODERS_PATH)
+    for col in ["section", "unit", "category", "fav_category", "order_status"]:
+        df[col + "_enc"] = encoders[col].transform(df[col].astype(str))
+
+    return df
+
+
+def _recommend_for_user(user_id, top_n=5):
+    if not _task_files_exist():
+        raise FileNotFoundError("Task 1 model files are missing.")
+
+    df = _prepare_dataset()
+    model = joblib.load(MODEL_PATH)
+    target_encoder = joblib.load(TARGET_ENCODER_PATH)
+
+    user_rows = df[df["user_id"] == int(user_id)]
+
+    if user_rows.empty:
+        return [], []
+
+    latest = user_rows.sort_values("order_date").iloc[[-1]]
+    x_user = latest[FEATURES]
+
+    probs = model.predict_proba(x_user)[0]
+    top_indices = np.argsort(probs)[::-1][:top_n]
+    top_products = target_encoder.inverse_transform(top_indices)
+    top_scores = probs[top_indices]
+
+    most_purchased = (
+        user_rows["product_name"]
+        .value_counts()
+        .head(5)
+        .index
+        .tolist()
+    )
+
+    recommendations = []
+    for product_name, score in zip(top_products, top_scores):
+        product = Product.objects.filter(name__iexact=str(product_name)).first()
+        recommendations.append({
+            "user_id": user_id,
+            "product_name": product_name,
+            "confidence": round(float(score) * 100, 1),
+            "product": product,
+        })
+
+    return recommendations, most_purchased
 
 
 @role_required("ai_engineer")
 def ai_engineer_dashboard(request):
-    model_exists = os.path.exists(MODEL_OUTPUT_PATH)
     summary = {}
 
-    if os.path.exists(SUMMARY_PATH):
-        with open(SUMMARY_PATH, encoding="utf-8") as f:
-            summary = json.load(f)
+    if os.path.exists(DATA_PATH):
+        df = pd.read_csv(DATA_PATH)
+        summary = {
+            "orders_rows": len(df),
+            "users": df["user_id"].nunique(),
+            "products": df["product_name"].nunique(),
+            "model": "Random Forest",
+        }
 
     return render(request, "ai_engineer/dashboard.html", {
-        "model_exists": model_exists,
+        "model_exists": _task_files_exist(),
         "summary": summary,
     })
 
@@ -48,30 +155,12 @@ def train_model(request):
         return redirect("ai_engineer_dashboard")
 
     try:
-        recommender = _load_recommender()
-        artifacts = recommender.train_hybrid_model()
-        all_recs = recommender.recommend_for_all_users(artifacts, top_n=5)
-
-        all_recs.to_csv(MODEL_OUTPUT_PATH, index=False)
-
-        summary = {
-            "orders_rows": int(len(artifacts.orders)),
-            "users": int(artifacts.orders["user_key"].nunique()),
-            "products": int(artifacts.orders["product_name"].nunique()),
-            "alpha": recommender.ALPHA,
-            "beta": recommender.BETA,
-            "top_n": recommender.TOP_N,
-        }
-
-        with open(SUMMARY_PATH, "w", encoding="utf-8") as f:
-            json.dump(summary, f, indent=2, default=str)
-
-        messages.success(
-            request,
-            f"✅ Model trained successfully! {summary['users']} users, {summary['products']} products."
+        subprocess.run(
+            [sys.executable, TRAINING_SCRIPT_PATH],
+            cwd=TASK_DIR,
+            check=True,
         )
-    except FileNotFoundError as e:
-        messages.error(request, f"❌ Missing data file: {e}")
+        messages.success(request, "Task 1 Random Forest model trained successfully.")
     except Exception as e:
         messages.error(request, f"Training failed: {e}")
 
@@ -80,85 +169,60 @@ def train_model(request):
 
 @role_required("ai_engineer")
 def view_recommendations(request):
-    recs = []
+    user_id = request.GET.get("user_id", "1")
 
-    if not os.path.exists(MODEL_OUTPUT_PATH):
-        messages.warning(request, "No recommendations found. Please train the model first.")
-        return redirect("ai_engineer_dashboard")
-
-    df = pd.read_csv(MODEL_OUTPUT_PATH)
-    recs = df.to_dict("records")
+    try:
+        recommendations, most_purchased = _recommend_for_user(user_id, top_n=5)
+    except Exception as e:
+        messages.error(request, str(e))
+        recommendations, most_purchased = [], []
 
     return render(request, "ai_engineer/recommendations_table.html", {
-        "recommendations": recs,
-        "total": len(recs),
+        "recommendations": recommendations,
+        "most_purchased": most_purchased,
+        "total": len(recommendations),
+        "user_id": user_id,
     })
 
 
 @login_required
 def customer_recommendations(request):
-    """Show personalised recommendations for the logged-in customer."""
-    username = request.user.username
-    recs = []
-    error = None
+    user_id = request.GET.get("user_id", request.user.id)
 
-    if not os.path.exists(MODEL_OUTPUT_PATH):
-        error = "Recommendations are not available yet. Please check back later."
-    else:
-        try:
-            df = pd.read_csv(MODEL_OUTPUT_PATH)
-            user_recs = df[df["user_key"] == username]
-
-            if user_recs.empty:
-                if os.path.exists(BESTSELLER_PATH):
-                    fallback = pd.read_csv(BESTSELLER_PATH).head(5)
-                    recs = fallback.to_dict("records")
-                    for r in recs:
-                        r["note"] = "Popular with all customers"
-                else:
-                    error = "No recommendations available for your account yet."
-            else:
-                recs = user_recs.to_dict("records")
-
-            for r in recs:
-                product = Product.objects.filter(
-                    name__iexact=str(r.get("product_name", "")).strip(),
-                    producer__display_name__iexact=str(r.get("producer_name", "")).strip(),
-                ).select_related("producer").first()
-                r["product"] = product
-
-        except Exception as e:
-            error = str(e)
+    try:
+        recommendations, most_purchased = _recommend_for_user(user_id, top_n=5)
+        error = None
+    except Exception as e:
+        recommendations, most_purchased = [], []
+        error = str(e)
 
     return render(request, "ai_engineer/customer_recommendations.html", {
-        "recommendations": recs,
+        "recommendations": recommendations,
+        "most_purchased": most_purchased,
         "error": error,
-        "username": username,
+        "username": request.user.username,
+        "user_id": user_id,
     })
 
 
 @login_required
 @require_GET
 def recommendations_api(request):
-    username = request.user.username
-
-    if not os.path.exists(MODEL_OUTPUT_PATH):
-        return JsonResponse({"status": "error", "message": "Model not trained yet."}, status=503)
+    user_id = request.GET.get("user_id", request.user.id)
 
     try:
-        df = pd.read_csv(MODEL_OUTPUT_PATH)
-        user_recs = df[df["user_key"] == username]
-
-        if user_recs.empty:
-            if os.path.exists(BESTSELLER_PATH):
-                user_recs = pd.read_csv(BESTSELLER_PATH).head(5)
-            else:
-                return JsonResponse({"status": "ok", "recommendations": []})
-
+        recommendations, most_purchased = _recommend_for_user(user_id, top_n=5)
         return JsonResponse({
             "status": "ok",
-            "username": username,
-            "recommendations": user_recs.to_dict("records"),
+            "user_id": user_id,
+            "most_purchased": most_purchased,
+            "recommendations": [
+                {
+                    "product_name": r["product_name"],
+                    "confidence": r["confidence"],
+                }
+                for r in recommendations
+            ],
         })
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
