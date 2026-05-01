@@ -7,7 +7,7 @@
 
     <div class="p-4 mb-4 bg-white border rounded shadow-sm">
         <h1 class="h2 mb-1">AI Engineer Dashboard</h1>
-        <p class="text-muted mb-0">Train and manage the hybrid recommendation model.</p>
+        <p class="text-muted mb-0">Manage and train the Task 1 Intelligent Ordering model (Random Forest).</p>
     </div>
 
     {% if messages %}
@@ -22,7 +22,7 @@
 
     <!-- Model Status -->
     <div class="row g-3 mb-4">
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <h6 class="text-muted">Model Status</h6>
@@ -34,24 +34,15 @@
                 </div>
             </div>
         </div>
+
         {% if summary %}
-        <div class="col-md-4">
+        <div class="col-md-6">
             <div class="card shadow-sm h-100">
                 <div class="card-body">
-                    <h6 class="text-muted">Last Training Stats</h6>
+                    <h6 class="text-muted">Dataset Summary</h6>
                     <p class="mb-1"><strong>{{ summary.users }}</strong> users</p>
                     <p class="mb-1"><strong>{{ summary.products }}</strong> products</p>
                     <p class="mb-0"><strong>{{ summary.orders_rows }}</strong> order rows</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Model Weights</h6>
-                    <p class="mb-1">SVD (α): <strong>{{ summary.alpha }}</strong></p>
-                    <p class="mb-1">Random Forest (β): <strong>{{ summary.beta }}</strong></p>
-                    <p class="mb-0">Top N: <strong>{{ summary.top_n }}</strong></p>
                 </div>
             </div>
         </div>
@@ -63,8 +54,8 @@
         <div class="card-body">
             <h5 class="card-title">Train / Retrain Model</h5>
             <p class="text-muted">
-                Runs the full hybrid pipeline (SVD + Random Forest) on the orders dataset
-                and generates personalised recommendations for all users.
+                Trains the Random Forest model using customer purchase history to predict
+                the next likely product for each user.
             </p>
             <form method="post" action="{% url 'ai_engineer_train' %}">
                 {% csrf_token %}
@@ -80,36 +71,29 @@
     {% if model_exists %}
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h5 class="card-title">View Generated Recommendations</h5>
-            <p class="text-muted">Inspect all recommendations produced by the model across all users.</p>
+            <h5 class="card-title">View Recommendations</h5>
+            <p class="text-muted">View predicted next products for users.</p>
             <a href="{% url 'ai_engineer_recommendations' %}" class="btn btn-outline-dark">
-                📊 View Recommendations Table
+                📊 View Recommendations
             </a>
         </div>
     </div>
     {% endif %}
 
-    <!-- XAI Explanation -->
+    <!-- Explanation -->
     <div class="card shadow-sm border-start border-4 border-dark">
         <div class="card-body">
-            <h5 class="card-title">How the Hybrid Model Works</h5>
+            <h5 class="card-title">How the Model Works</h5>
             <p class="text-muted mb-2">
-                The recommendation model combines two machine learning techniques:
+                This system uses a <strong>Random Forest Machine Learning model</strong> to analyse customer purchase history.
             </p>
             <ul class="mb-2">
-                <li>
-                    <strong>SVD (Matrix Factorisation)</strong> — identifies hidden patterns between
-                    users and products based on order history. Weighted at
-                    α = {{ summary.alpha|default:"0.6" }}.
-                </li>
-                <li>
-                    <strong>Random Forest</strong> — predicts the probability a user will reorder
-                    a product, using features like category, frequency, and recency. Weighted at
-                    β = {{ summary.beta|default:"0.4" }}.
-                </li>
+                <li>Identifies user purchasing patterns</li>
+                <li>Learns product preferences</li>
+                <li>Predicts the next likely product to reorder</li>
             </ul>
             <p class="text-muted mb-0">
-                Final score = <code>α × SVD score + β × RF probability</code>
+                The model provides personalised recommendations to improve user experience and support quick re-ordering.
             </p>
         </div>
     </div>
