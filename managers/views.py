@@ -1,7 +1,13 @@
+from datetime import datetime, timedelta
+from decimal import Decimal, ROUND_HALF_UP
+import csv
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
+from django.utils import timezone
 
 
 @login_required
@@ -129,3 +135,247 @@ def producers_list(request):
     except Exception:
         producers = []
     return render(request, 'managers/producers_list.html', {'producers': producers})
+
+
+# ---------------------------------------------------------------------------
+# TC-025: Financial Reports / Network Commission
+# ---------------------------------------------------------------------------
+COMMISSION_RATE = Decimal("0.05")
+PRODUCER_RATE = Decimal("0.95")
+
+
+def _money(value):
+    return Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def _parse_date(raw, fallback):
+    if not raw:
+        return fallback
+    try:
+        return datetime.strptime(raw, "%Y-%m-%d").date()
+    except ValueError:
+        return fallback
+
+
+def _build_commission_dataset(start_date, end_date, producer_filter="", status_filter=""):
+    """Compute commission rows for the given filters.
+
+    Returns a tuple (rows, totals) where ``rows`` is a list of dicts with the
+    full audit trail per order (including per-producer payout breakdown) and
+    ``totals`` aggregates the period-level stats.
+    """
+    from basket.models import Order
+
+    qs = (
+        Order.objects
+        .filter(
+            created_at__date__gte=start_date,
+            created_at__date__lte=end_date,
+        )
+        .prefetch_related("items", "producer_orders")
+        .order_by("-created_at")
+    )
+
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    if producer_filter:
+        qs = qs.filter(producer_orders__producer_name__icontains=producer_filter).distinct()
+
+    rows = []
+    total_order_value = Decimal("0.00")
+    total_commission = Decimal("0.00")
+    total_producer_payout = Decimal("0.00")
+
+    for order in qs:
+        order_total = Decimal(order.total_amount or 0)
+        subtotal = _money(order_total / (Decimal("1") + COMMISSION_RATE)) if order_total else Decimal("0.00")
+        commission = _money(subtotal * COMMISSION_RATE)
+        producer_total = _money(subtotal * PRODUCER_RATE)
+
+        producer_breakdown = []
+        for po in order.producer_orders.all():
+            po_subtotal = Decimal(po.subtotal_amount or 0)
+            po_payout = _money(po_subtotal * PRODUCER_RATE)
+            producer_breakdown.append({
+                "producer_name": po.producer_name,
+                "subtotal": _money(po_subtotal),
+                "payout": po_payout,
+            })
+
+        rows.append({
+            "order_id": order.id,
+            "created_at": order.created_at,
+            "customer": order.user.username if order.user else order.cardholder_name,
+            "status": order.get_status_display(),
+            "status_code": order.status,
+            "subtotal": subtotal,
+            "commission": commission,
+            "producer_total": producer_total,
+            "order_total": _money(order_total),
+            "producer_breakdown": producer_breakdown,
+        })
+
+        total_order_value += subtotal
+        total_commission += commission
+        total_producer_payout += producer_total
+
+    totals = {
+        "order_count": len(rows),
+        "total_order_value": _money(total_order_value),
+        "total_commission": _money(total_commission),
+        "total_producer_payout": _money(total_producer_payout),
+        "total_with_commission": _money(total_order_value + total_commission),
+    }
+
+    return rows, totals
+
+
+def _ytd_totals():
+    today = timezone.localdate()
+    start_of_year = today.replace(month=1, day=1)
+    _, totals = _build_commission_dataset(start_of_year, today)
+    return totals
+
+
+def _monthly_summary(months_back=6):
+    today = timezone.localdate()
+    summaries = []
+
+    for i in range(months_back):
+        anchor = today.replace(day=1)
+        for _ in range(i):
+            previous_month_end = anchor - timedelta(days=1)
+            anchor = previous_month_end.replace(day=1)
+
+        if anchor.month == 12:
+            next_month = anchor.replace(year=anchor.year + 1, month=1, day=1)
+        else:
+            next_month = anchor.replace(month=anchor.month + 1, day=1)
+        end_of_month = next_month - timedelta(days=1)
+
+        _, totals = _build_commission_dataset(anchor, end_of_month)
+        summaries.append({
+            "label": anchor.strftime("%B %Y"),
+            "start": anchor,
+            "end": end_of_month,
+            "totals": totals,
+        })
+
+    return summaries
+
+
+@login_required
+def financial_reports(request):
+    """TC-025: Network commission report for system administrators / managers."""
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.role != 'manager':
+        raise PermissionDenied()
+
+    today = timezone.localdate()
+    default_start = today - timedelta(days=14)
+    start_date = _parse_date(request.GET.get("start"), default_start)
+    end_date = _parse_date(request.GET.get("end"), today)
+    producer_filter = request.GET.get("producer", "").strip()
+    status_filter = request.GET.get("status", "").strip()
+
+    rows, totals = _build_commission_dataset(
+        start_date, end_date, producer_filter=producer_filter, status_filter=status_filter
+    )
+
+    if request.GET.get("export") == "csv":
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = (
+            f'attachment; filename="commission_report_{start_date}_{end_date}.csv"'
+        )
+        writer = csv.writer(response)
+        writer.writerow([
+            "Order ID", "Created", "Customer", "Status",
+            "Subtotal (£)", "Commission 5% (£)",
+            "Producer Total 95% (£)", "Order Total (£)",
+            "Producer Breakdown",
+        ])
+        for row in rows:
+            breakdown = "; ".join(
+                f"{p['producer_name']}: subtotal £{p['subtotal']} -> payout £{p['payout']}"
+                for p in row["producer_breakdown"]
+            )
+            writer.writerow([
+                row["order_id"],
+                row["created_at"].strftime("%Y-%m-%d %H:%M") if row["created_at"] else "",
+                row["customer"],
+                row["status"],
+                row["subtotal"],
+                row["commission"],
+                row["producer_total"],
+                row["order_total"],
+                breakdown,
+            ])
+        writer.writerow([])
+        writer.writerow(["Period totals"])
+        writer.writerow(["Orders processed", totals["order_count"]])
+        writer.writerow(["Total order value (subtotal)", totals["total_order_value"]])
+        writer.writerow(["Total commission (5%)", totals["total_commission"]])
+        writer.writerow(["Total producer payout (95%)", totals["total_producer_payout"]])
+        writer.writerow(["Total billed including commission", totals["total_with_commission"]])
+        return response
+
+    status_choices = []
+    try:
+        from basket.models import Order as OrderModel
+        status_choices = OrderModel.STATUS_CHOICES
+    except Exception:
+        status_choices = []
+
+    return render(request, 'managers/financial_reports.html', {
+        "rows": rows,
+        "totals": totals,
+        "start_date": start_date,
+        "end_date": end_date,
+        "producer_filter": producer_filter,
+        "status_filter": status_filter,
+        "status_choices": status_choices,
+        "ytd_totals": _ytd_totals(),
+        "monthly_summary": _monthly_summary(months_back=6),
+        "commission_rate_pct": "5",
+        "producer_rate_pct": "95",
+    })
+
+
+@login_required
+def financial_report_detail(request, order_id):
+    """Drill-down view for a single order's commission audit trail."""
+    if not hasattr(request.user, 'userprofile') or request.user.userprofile.role != 'manager':
+        raise PermissionDenied()
+
+    from basket.models import Order
+
+    order = get_object_or_404(
+        Order.objects.prefetch_related("items", "producer_orders"),
+        pk=order_id,
+    )
+
+    order_total = Decimal(order.total_amount or 0)
+    subtotal = _money(order_total / (Decimal("1") + COMMISSION_RATE)) if order_total else Decimal("0.00")
+    commission = _money(subtotal * COMMISSION_RATE)
+    producer_total = _money(subtotal * PRODUCER_RATE)
+
+    producer_breakdown = []
+    for po in order.producer_orders.all():
+        po_subtotal = Decimal(po.subtotal_amount or 0)
+        po_payout = _money(po_subtotal * PRODUCER_RATE)
+        producer_breakdown.append({
+            "producer_name": po.producer_name,
+            "subtotal": _money(po_subtotal),
+            "payout": po_payout,
+            "delivery_date": po.delivery_date,
+            "status": po.get_status_display(),
+        })
+
+    return render(request, 'managers/financial_report_detail.html', {
+        "order": order,
+        "subtotal": subtotal,
+        "commission": commission,
+        "producer_total": producer_total,
+        "order_total": _money(order_total),
+        "producer_breakdown": producer_breakdown,
+    })

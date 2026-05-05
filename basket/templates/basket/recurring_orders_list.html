@@ -1,0 +1,98 @@
+{% extends "base/base.html" %}
+
+{% block title %}Recurring Orders | BRFN{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div>
+            <h1 class="mb-1">Recurring Orders</h1>
+            <p class="text-muted mb-0">
+                Manage standing weekly or fortnightly orders for your business.
+            </p>
+        </div>
+        <a href="{% url 'basket:basket_detail' %}" class="btn btn-outline-dark">
+            Start a New Order
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% if templates %}
+        <div class="list-group">
+            {% for entry in templates %}
+                <div class="list-group-item mb-3 rounded shadow-sm">
+                    <div class="d-flex justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h5 class="mb-1">
+                                {{ entry.template.name }}
+                                {% if entry.template.status == 'active' %}
+                                    <span class="badge bg-success ms-2">Active</span>
+                                {% elif entry.template.status == 'paused' %}
+                                    <span class="badge bg-warning text-dark ms-2">Paused</span>
+                                {% else %}
+                                    <span class="badge bg-secondary ms-2">Cancelled</span>
+                                {% endif %}
+                            </h5>
+                            <p class="mb-1">
+                                <strong>Recurrence:</strong> {{ entry.template.get_frequency_display }} ·
+                                <strong>Order day:</strong> {{ entry.template.get_order_day_display }} ·
+                                <strong>Delivery day:</strong> {{ entry.template.get_delivery_day_display }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Next order date:</strong>
+                                {{ entry.template.next_run_date|date:"D, d M Y" }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Next delivery:</strong>
+                                {{ entry.template.next_delivery_date|date:"D, d M Y" }}
+                            </p>
+                            <p class="mb-1">
+                                <strong>Items:</strong> {{ entry.items|length }} ·
+                                <strong>Template total:</strong> £{{ entry.template_total|floatformat:2 }}
+                            </p>
+                            {% if entry.unavailable_items %}
+                                <div class="alert alert-warning small mt-2 mb-0">
+                                    <strong>Heads up:</strong> some products in this template are
+                                    currently unavailable and may not be included in the next order:
+                                    {{ entry.unavailable_items|join:", " }}.
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="d-flex gap-2 align-items-start">
+                            <a href="{% url 'basket:recurring_order_detail' entry.template.id %}"
+                               class="btn btn-sm btn-outline-primary">
+                                View / Manage
+                            </a>
+                            {% if entry.template.status != 'cancelled' %}
+                                <a href="{% url 'basket:recurring_order_modify' entry.template.id %}"
+                                   class="btn btn-sm btn-dark">
+                                    Modify Next Order
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="card shadow-sm">
+            <div class="card-body text-center py-5">
+                <h2 class="h5">You don't have any recurring orders yet.</h2>
+                <p class="text-muted">
+                    Add products to your basket and tick "Make this a recurring order"
+                    on the checkout page to set up an automatic weekly or fortnightly delivery.
+                </p>
+                <a href="{% url 'products:product_list' %}" class="btn btn-success">
+                    Browse Products
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -49,10 +49,33 @@
         </div>
       {% endfor %}
 
-      <div class="text-center mt-4">
+      {% if recurring_template %}
+        <div class="alert alert-info border rounded p-3">
+          <h2 class="h6 mb-2">Recurring Order Saved</h2>
+          <p class="mb-1">
+            <strong>{{ recurring_template.name }}</strong>
+            ({{ recurring_template.get_frequency_display }})
+          </p>
+          <p class="mb-1">
+            Next order date:
+            <strong>{{ recurring_template.next_run_date|date:"l, d M Y" }}</strong>
+          </p>
+          <p class="mb-0">
+            Next delivery:
+            <strong>{{ recurring_template.next_delivery_date|date:"l, d M Y" }}</strong>
+          </p>
+        </div>
+      {% endif %}
+
+      <div class="text-center mt-4 d-flex justify-content-center gap-2 flex-wrap">
         <a href="{% url 'customer_dashboard' %}" class="btn btn-dark">
           Return to Dashboard
         </a>
+        {% if recurring_template %}
+          <a href="{% url 'basket:recurring_order_detail' recurring_template.id %}" class="btn btn-success">
+            Manage Recurring Order
+          </a>
+        {% endif %}
       </div>
     </div>
   </div>

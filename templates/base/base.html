@@ -77,6 +77,12 @@
                             Bag ({{ request.session.basket|length|default:0 }})
                         </a>
                     </li>
+                    {# TC-018: Recurring orders — visible to customer / restaurant accounts #}
+                    <li class="nav-item">
+                        <a class="btn btn-outline-light btn-sm" href="{% url 'basket:recurring_orders_list' %}">
+                            Recurring Orders
+                        </a>
+                    </li>
                     {% endif %}
 
                     {% if user.is_authenticated and user.userprofile.role == "ai_engineer" %}
