@@ -9,6 +9,14 @@ class ProductForm(forms.ModelForm):
         label="Surplus Deal Duration (hours)",
         widget=forms.NumberInput(attrs={"class": "form-control", "min": "1"})
     )
+    low_stock_threshold = forms.IntegerField(
+        required=False,
+        initial=10,
+        min_value=0,
+        label="Low Stock Threshold",
+        help_text="Send alert when stock falls below this number",
+        widget=forms.NumberInput(attrs={"class": "form-control", "min": "0"})
+    )
 
     class Meta:
         model = Product
@@ -82,6 +90,12 @@ class ProductForm(forms.ModelForm):
         if stock < 0:
             raise forms.ValidationError("Stock cannot be negative.")
         return stock
+
+    def clean_low_stock_threshold(self):
+        value = self.cleaned_data.get("low_stock_threshold")
+        if value is None:
+            return 10
+        return value
 
     def clean(self):
         cleaned_data = super().clean()
