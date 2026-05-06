@@ -3,91 +3,99 @@
 {% block title %}Recommended for You{% endblock %}
 
 {% block content %}
-<div class="container py-4">
 
-    <div class="p-4 mb-4 bg-white border rounded shadow-sm">
-        <h1 class="h2 mb-1">Recommended for You</h1>
-        <p class="text-muted mb-0">
-            Personalised quick re-order suggestions based on your purchase history, {{ username }}.
-        </p>
-    </div>
-
-    {% if error %}
-        <div class="alert alert-warning">⚠️ {{ error }}</div>
-    {% endif %}
-
-    {% if most_purchased %}
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Your Frequently Ordered Products</h5>
-            <p class="text-muted mb-2">These products appear most often in your previous orders.</p>
-            {% for item in most_purchased %}
-                <span class="badge bg-light text-dark border me-1 mb-1">{{ item }}</span>
-            {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-
-    {% if recommendations %}
-        <h2 class="h4 mb-3">🎯 Predicted Next Products</h2>
-
-        <div class="row g-3">
-            {% for rec in recommendations %}
-            <div class="col-md-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body d-flex flex-column">
-
-                        <h5 class="card-title mb-2">{{ rec.product_name }}</h5>
-
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between">
-                                <small class="text-muted">Prediction Confidence</small>
-                                <small><strong>{{ rec.confidence }}%</strong></small>
-                            </div>
-                            <div class="progress" style="height: 8px;">
-                                <div class="progress-bar bg-dark"
-                                     role="progressbar"
-                                     style="width: {{ rec.confidence }}%;">
-                                </div>
-                            </div>
-                        </div>
-
-                        <details class="mb-3">
-                            <summary class="text-muted small" style="cursor:pointer;">
-                                💡 Why is this recommended?
-                            </summary>
-                            <div class="mt-2 p-2 bg-light rounded small">
-                                This product was predicted by the Task 1 Random Forest model using your order history,
-                                product details, purchase patterns, spending behaviour, organic preference, and seasonal/time features.
-                            </div>
-                        </details>
-
-                        <div class="mt-auto">
-                            {% if rec.product %}
-                                <a href="{% url 'products:product_detail' rec.product.id %}"
-                                   class="btn btn-dark btn-sm w-100">
-                                    Order Now
-                                </a>
-                            {% else %}
-                                <a href="{% url 'products:product_list' %}"
-                                   class="btn btn-outline-secondary btn-sm w-100">
-                                    View Marketplace
-                                </a>
-                            {% endif %}
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        {% if not error %}
-            <div class="alert alert-info">
-                No recommendations available yet.
-            </div>
-        {% endif %}
-    {% endif %}
-
+<!-- HEADER -->
+<div class="mb-4">
+  <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 4px;">Recommended for You</h1>
+  <p style="color: #888; margin: 0; font-size: 14px;">
+    Personalised quick re-order suggestions based on your purchase history, {{ username }}.
+  </p>
 </div>
+
+<!-- ERROR -->
+{% if error %}
+<div style="background: #faeeda; border: 1px solid #f4b400; border-radius: 10px; padding: 12px 16px; margin-bottom: 1rem; font-size: 14px; color: #633806;">
+  {{ error }}
+</div>
+{% endif %}
+
+<!-- FREQUENTLY ORDERED -->
+{% if most_purchased %}
+<div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 2rem;">
+  <p style="font-size: 14px; font-weight: 600; color: #1a1a1a; margin: 0 0 4px;">Your frequently ordered products</p>
+  <p style="font-size: 13px; color: #888; margin: 0 0 12px;">These products appear most often in your previous orders.</p>
+  <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+    {% for item in most_purchased %}
+    <span style="background: #eaf3de; color: #27500a; font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 20px; border: 1px solid #c0dd97;">
+      {{ item }}
+    </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- RECOMMENDATIONS -->
+{% if recommendations %}
+
+<p style="font-size: 15px; font-weight: 600; color: #1a1a1a; margin: 0 0 1rem;">Predicted next products</p>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;">
+  {% for rec in recommendations %}
+  <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column;">
+
+    <div style="width: 40px; height: 40px; border-radius: 10px; background: #eaf3de; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+      <img src="/media/icons/sparkles-2.png" alt="" width="20" height="20">
+    </div>
+
+    <h3 style="font-size: 15px; font-weight: 600; color: #1a1a1a; margin: 0 0 12px;">{{ rec.product_name }}</h3>
+
+    <!-- CONFIDENCE BAR -->
+    <div style="margin-bottom: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-size: 12px; color: #888;">Prediction confidence</span>
+        <span style="font-size: 12px; font-weight: 600; color: #1a6b3a;">{{ rec.confidence }}%</span>
+      </div>
+      <div style="background: #f0f0f0; border-radius: 20px; height: 6px; overflow: hidden;">
+        <div style="width: {{ rec.confidence }}%; height: 100%; background: #1a6b3a; border-radius: 20px;"></div>
+      </div>
+    </div>
+
+    <!-- WHY RECOMMENDED -->
+    <details style="margin-bottom: 1rem;">
+      <summary style="font-size: 12px; color: #888; cursor: pointer; font-weight: 500;">
+        Why is this recommended?
+      </summary>
+      <div style="margin-top: 8px; background: #f8f9fa; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #666; line-height: 1.6;">
+        Predicted by the Random Forest model using your order history, product details, purchase patterns,
+        spending behaviour, organic preference, and seasonal features.
+      </div>
+    </details>
+
+    <!-- CTA BUTTON -->
+    <div style="margin-top: auto;">
+      {% if rec.product %}
+        <a href="{% url 'products:product_detail' rec.product.id %}"
+           style="display: block; text-align: center; background: #1a6b3a; color: #fff; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 500; text-decoration: none;">
+          Order Now
+        </a>
+      {% else %}
+        <a href="{% url 'products:product_list' %}"
+           style="display: block; text-align: center; background: transparent; color: #1a6b3a; border: 1px solid #1a6b3a; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 500; text-decoration: none;">
+          View Marketplace
+        </a>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+  {% if not error %}
+  <div style="background: #f8f9fa; border: 1px solid #e5e5e0; border-radius: 12px; padding: 3rem; text-align: center;">
+    <p style="color: #aaa; font-size: 14px; margin: 0;">No recommendations available yet.</p>
+  </div>
+  {% endif %}
+{% endif %}
+
 {% endblock %}

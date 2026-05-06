@@ -4,11 +4,14 @@ body {
     background-color: #f8f9fa;
     font-family: "Segoe UI", Roboto, Arial, sans-serif;
     color: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 /* Page spacing */
 main.container {
-    min-height: 70vh;
+    flex: 1;
 }
 
 .navbar-brand img {
@@ -109,4 +112,17 @@ footer .text-muted {
 
 .text-muted {
     color: #6c757d !important;
+}
+
+.actions-grid-one {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 2rem;
+}
+.actions-grid-two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 2rem;
 }

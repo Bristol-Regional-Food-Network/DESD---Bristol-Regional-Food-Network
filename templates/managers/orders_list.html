@@ -3,76 +3,110 @@
 {% block title %}Orders | Manager Dashboard{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <h1>Orders</h1>
-    <ul class="nav nav-tabs mb-3">
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/orders/' in request.path %}active{% endif %}" href="{% url 'manager_orders' %}">Orders</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/customers/' in request.path %}active{% endif %}" href="{% url 'manager_customers' %}">Customers</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/producers/' in request.path %}active{% endif %}" href="{% url 'manager_producers' %}">Producers</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/financial-reports' in request.path %}active{% endif %}" href="{% url 'manager_financial_reports' %}">Financial Reports</a>
-        </li>
-    </ul>
 
-    <div class="table-responsive shadow-sm rounded bg-white p-3">
-        <table class="table table-striped table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>#</th>
-                    <th>Customer</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                    <th>Delivery</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for o in orders %}
-                <tr>
-                    <td>{{ o.id }}</td>
-                    <td>{% if o.user %}{{ o.user.username }}{% else %}{{ o.cardholder_name }}{% endif %}</td>
-                    <td>£{{ o.total_amount }}</td>
-                    <td>
-                        <form method="post" action="" class="d-flex align-items-center">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="update_status">
-                            <input type="hidden" name="order_id" value="{{ o.id }}">
-                            <select name="status" class="form-select form-select-sm me-2" style="width: auto;">
-                                {% for key, label in status_choices %}
-                                    <option value="{{ key }}" {% if key == o.status %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                            <button class="btn btn-sm btn-primary" type="submit">Update</button>
-                        </form>
-                    </td>
-                    <td>{{ o.delivery_date }}</td>
-                    <td>{{ o.created_at|date:"Y-m-d H:i" }}</td>
-                    <td>
-                        <form method="post" action="" onsubmit="return confirmDelete(this);">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="delete">
-                            <input type="hidden" name="order_id" value="{{ o.id }}">
-                            <button class="btn btn-sm btn-danger">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="8" class="text-muted">No orders found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<!-- HEADER -->
+<div class="mb-4">
+  <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 4px;">Orders</h1>
+  <p style="color: #888; margin: 0; font-size: 14px;">View and manage all orders across the network.</p>
 </div>
+
+<!-- NAV TABS -->
+<div style="border-bottom: 1px solid #e5e5e0; margin-bottom: 2rem;">
+  <nav style="display: flex; gap: 4px;">
+    <a href="{% url 'manager_orders' %}" class="mgr-tab {% if '/manager/orders/' in request.path %}mgr-tab-active{% endif %}">Orders</a>
+    <a href="{% url 'manager_customers' %}" class="mgr-tab {% if '/manager/customers/' in request.path %}mgr-tab-active{% endif %}">Customers</a>
+    <a href="{% url 'manager_producers' %}" class="mgr-tab {% if '/manager/producers/' in request.path %}mgr-tab-active{% endif %}">Producers</a>
+    <a href="{% url 'manager_financial_reports' %}" class="mgr-tab {% if '/manager/financial-reports' in request.path %}mgr-tab-active{% endif %}">Financial Reports</a>
+  </nav>
+</div>
+
+<!-- TABLE -->
+<div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; overflow: hidden;">
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+      <thead>
+        <tr style="background: #f8f9fa; border-bottom: 1px solid #e5e5e0;">
+          <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">#</th>
+          <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Customer</th>
+          <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Total</th>
+          <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Status</th>
+          <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Delivery</th>
+          <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Created</th>
+          <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr class="tbl-row">
+          <td style="padding: 12px 16px; color: #888;">{{ o.id }}</td>
+          <td style="padding: 12px 16px; font-weight: 500; color: #1a1a1a;">
+            {% if o.user %}{{ o.user.username }}{% else %}{{ o.cardholder_name }}{% endif %}
+          </td>
+          <td style="padding: 12px 16px; font-weight: 600; color: #1a6b3a;">£{{ o.total_amount }}</td>
+          <td style="padding: 12px 16px;">
+            <form method="post" action="" style="display: flex; align-items: center; gap: 8px;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="update_status">
+              <input type="hidden" name="order_id" value="{{ o.id }}">
+              <select name="status" style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 12px; outline: none; color: #333;">
+                {% for key, label in status_choices %}
+                  <option value="{{ key }}" {% if key == o.status %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" style="background: #1a6b3a; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer;">
+                Update
+              </button>
+            </form>
+          </td>
+          <td style="padding: 12px 16px; color: #888; font-size: 13px;">{{ o.delivery_date }}</td>
+          <td style="padding: 12px 16px; color: #888; font-size: 13px;">{{ o.created_at|date:"Y-m-d H:i" }}</td>
+          <td style="padding: 12px 16px;">
+            <form method="post" action="" onsubmit="return confirmDelete(this);">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="delete">
+              <input type="hidden" name="order_id" value="{{ o.id }}">
+              <button type="submit" style="background: transparent; color: #e24b4a; border: 1px solid #e24b4a; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 500; cursor: pointer;">
+                Delete
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7" style="padding: 2rem; text-align: center; color: #aaa; font-size: 14px;">No orders found.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  .tbl-row { border-bottom: 1px solid #f0f0f0; }
+  .tbl-row:hover { background: #f8f9fa; }
+  .mgr-tab {
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid transparent;
+    color: #666;
+  }
+  .mgr-tab:hover { color: #1a6b3a; text-decoration: none; }
+  .mgr-tab-active {
+    background: #fff;
+    border-color: #e5e5e0;
+    border-bottom-color: #fff;
+    color: #1a6b3a;
+  }
+  select:focus { border-color: #1a6b3a !important; box-shadow: 0 0 0 3px rgba(26,107,58,0.12); }
+</style>
+
 <script>
 function confirmDelete(form) {
-    return confirm('Are you sure you want to delete this order permanently? This action cannot be undone.');
+  return confirm('Are you sure you want to delete this order? This cannot be undone.');
 }
 </script>
+
 {% endblock %}

@@ -3,100 +3,140 @@
 {% block title %}AI Engineer Dashboard{% endblock %}
 
 {% block content %}
-<div class="container py-4">
 
-    <div class="p-4 mb-4 bg-white border rounded shadow-sm">
-        <h1 class="h2 mb-1">AI Engineer Dashboard</h1>
-        <p class="text-muted mb-0">Manage and train the Task 1 Intelligent Ordering model (Random Forest).</p>
-    </div>
+<!-- HEADER -->
+<div class="mb-4">
+  <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 4px;">AI Engineer Dashboard</h1>
+  <p style="color: #888; margin: 0; font-size: 14px;">Manage and train the Task 1 Intelligent Ordering model (Random Forest).</p>
+</div>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-dismissible fade show" role="alert"
-                 style="background:#d1e7dd; border-color:#badbcc;">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
+<!-- MESSAGES -->
+{% if messages %}
+  {% for message in messages %}
+  <div style="background: #eaf3de; border: 1px solid #c0dd97; border-radius: 10px; padding: 12px 16px; margin-bottom: 1rem; font-size: 14px; color: #27500a; display: flex; justify-content: space-between; align-items: center;">
+    {{ message }}
+    <button type="button" data-bs-dismiss="alert" style="background: none; border: none; cursor: pointer; color: #27500a; font-size: 18px; line-height: 1;">×</button>
+  </div>
+  {% endfor %}
+{% endif %}
 
-    <!-- Model Status -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Model Status</h6>
-                    {% if model_exists %}
-                        <span class="badge bg-success fs-6">✅ Trained</span>
-                    {% else %}
-                        <span class="badge bg-warning text-dark fs-6">⚠️ Not trained yet</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
+<!-- STATUS CARDS -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 2rem;">
 
-        {% if summary %}
-        <div class="col-md-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-body">
-                    <h6 class="text-muted">Dataset Summary</h6>
-                    <p class="mb-1"><strong>{{ summary.users }}</strong> users</p>
-                    <p class="mb-1"><strong>{{ summary.products }}</strong> products</p>
-                    <p class="mb-0"><strong>{{ summary.orders_rows }}</strong> order rows</p>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Train Button -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h5 class="card-title">Train / Retrain Model</h5>
-            <p class="text-muted">
-                Trains the Random Forest model using customer purchase history to predict
-                the next likely product for each user.
-            </p>
-            <form method="post" action="{% url 'ai_engineer_train' %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-dark"
-                        onclick="return confirm('Train the model? This may take a few seconds.')">
-                    🚀 Train Model
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- View Results -->
+  <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.5rem;">
+    <p style="font-size: 11px; font-weight: 600; color: #aaa; letter-spacing: 0.5px; text-transform: uppercase; margin: 0 0 12px;">Model Status</p>
     {% if model_exists %}
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h5 class="card-title">View Recommendations</h5>
-            <p class="text-muted">View predicted next products for users.</p>
-            <a href="{% url 'ai_engineer_recommendations' %}" class="btn btn-outline-dark">
-                📊 View Recommendations
-            </a>
-        </div>
-    </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: #1a6b3a; flex-shrink: 0;"></div>
+        <span style="font-size: 15px; font-weight: 600; color: #1a6b3a;">Trained & Ready</span>
+      </div>
+      <p style="font-size: 13px; color: #888; margin: 6px 0 0;">Model is active and generating recommendations.</p>
+    {% else %}
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 10px; height: 10px; border-radius: 50%; background: #f4b400; flex-shrink: 0;"></div>
+        <span style="font-size: 15px; font-weight: 600; color: #854f0b;">Not Trained Yet</span>
+      </div>
+      <p style="font-size: 13px; color: #888; margin: 6px 0 0;">Train the model to start generating recommendations.</p>
     {% endif %}
+  </div>
 
-    <!-- Explanation -->
-    <div class="card shadow-sm border-start border-4 border-dark">
-        <div class="card-body">
-            <h5 class="card-title">How the Model Works</h5>
-            <p class="text-muted mb-2">
-                This system uses a <strong>Random Forest Machine Learning model</strong> to analyse customer purchase history.
-            </p>
-            <ul class="mb-2">
-                <li>Identifies user purchasing patterns</li>
-                <li>Learns product preferences</li>
-                <li>Predicts the next likely product to reorder</li>
-            </ul>
-            <p class="text-muted mb-0">
-                The model provides personalised recommendations to improve user experience and support quick re-ordering.
-            </p>
-        </div>
+  {% if summary %}
+  <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.5rem;">
+    <p style="font-size: 11px; font-weight: 600; color: #aaa; letter-spacing: 0.5px; text-transform: uppercase; margin: 0 0 12px;">Dataset Summary</p>
+    <div style="display: flex; gap: 2rem;">
+      <div>
+        <p style="font-size: 22px; font-weight: 600; color: #1a1a1a; margin: 0;">{{ summary.users }}</p>
+        <p style="font-size: 12px; color: #888; margin: 2px 0 0;">Users</p>
+      </div>
+      <div>
+        <p style="font-size: 22px; font-weight: 600; color: #1a1a1a; margin: 0;">{{ summary.products }}</p>
+        <p style="font-size: 12px; color: #888; margin: 2px 0 0;">Products</p>
+      </div>
+      <div>
+        <p style="font-size: 22px; font-weight: 600; color: #1a1a1a; margin: 0;">{{ summary.orders_rows }}</p>
+        <p style="font-size: 12px; color: #888; margin: 2px 0 0;">Order rows</p>
+      </div>
     </div>
+  </div>
+  {% else %}
+  <div style="background: #f8f9fa; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.5rem; display: flex; align-items: center; justify-content: center;">
+    <p style="color: #aaa; font-size: 14px; margin: 0;">No dataset summary available.</p>
+  </div>
+  {% endif %}
 
 </div>
+
+<!-- ACTIONS -->
+<div class="{% if model_exists %}actions-grid-two{% else %}actions-grid-one{% endif %}">
+
+  <!-- Train Model -->
+  <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.5rem;">
+    <div style="width: 40px; height: 40px; border-radius: 10px; background: #1f3b2d; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+      <img src="/media/icons/sparkles-2.png" alt="" width="20" height="20" style="filter: invert(1);">
+    </div>
+    <h3 style="font-size: 15px; font-weight: 600; color: #1a1a1a; margin: 0 0 6px;">Train / Retrain Model</h3>
+    <p style="font-size: 13px; color: #666; line-height: 1.5; margin: 0 0 1.25rem;">
+      Trains the Random Forest model using customer purchase history to predict the next likely product for each user.
+    </p>
+    <form method="post" action="{% url 'ai_engineer_train' %}">
+      {% csrf_token %}
+      <button type="submit"
+              onclick="return confirm('Train the model? This may take a few seconds.')"
+              style="background: #1f3b2d; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer;">
+        Train Model
+      </button>
+    </form>
+  </div>
+
+  <!-- View Recommendations -->
+  {% if model_exists %}
+  <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.5rem;">
+    <div style="width: 40px; height: 40px; border-radius: 10px; background: #eaf3de; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+      <img src="/media/icons/receipt.png" alt="" width="20" height="20">
+    </div>
+    <h3 style="font-size: 15px; font-weight: 600; color: #1a1a1a; margin: 0 0 6px;">View Recommendations</h3>
+    <p style="font-size: 13px; color: #666; line-height: 1.5; margin: 0 0 1.25rem;">
+      Browse predicted next products for each user based on their purchase history.
+    </p>
+    <a href="{% url 'ai_engineer_recommendations' %}"
+       style="display: inline-block; background: #1a6b3a; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 500; text-decoration: none;">
+      View Recommendations
+    </a>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- HOW IT WORKS -->
+<div style="background: #fff; border: 1px solid #e5e5e0; border-left: 4px solid #1f3b2d; border-radius: 0 12px 12px 0; padding: 1.5rem;">
+  <h3 style="font-size: 15px; font-weight: 600; color: #1a1a1a; margin: 0 0 10px;">How the model works</h3>
+  <p style="font-size: 13px; color: #666; line-height: 1.6; margin: 0 0 10px;">
+    This system uses a <strong>Random Forest machine learning model</strong> to analyse customer purchase history.
+  </p>
+  <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px;">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 6px; height: 6px; border-radius: 50%; background: #1a6b3a; flex-shrink: 0;"></div>
+      <span style="font-size: 13px; color: #555;">Identifies user purchasing patterns</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 6px; height: 6px; border-radius: 50%; background: #1a6b3a; flex-shrink: 0;"></div>
+      <span style="font-size: 13px; color: #555;">Learns product preferences over time</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div style="width: 6px; height: 6px; border-radius: 50%; background: #1a6b3a; flex-shrink: 0;"></div>
+      <span style="font-size: 13px; color: #555;">Predicts the next likely product to reorder</span>
+    </div>
+  </div>
+  <p style="font-size: 13px; color: #888; margin: 0; line-height: 1.6;">
+    The model provides personalised recommendations to improve user experience and support quick re-ordering.
+  </p>
+</div>
+
+<style>
+  @media (max-width: 576px) {
+    div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+    div[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; }
+  }
+</style>
+
 {% endblock %}

@@ -3,372 +3,301 @@
 {% block title %}Producer Dashboard{% endblock %}
 
 {% block content %}
-<div class="container py-4">
 
-  {% include "producers/_stock_alerts.html" %}
+{% include "producers/_stock_alerts.html" %}
 
+<!-- HEADER -->
+<div style="margin-bottom: 2rem;">
   {% if producer %}
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
-      <div>
-        <h1 class="mb-2">{{ producer.display_name }}</h1>
-        <p class="text-muted mb-0">Manage your products by section, season, and surplus deals.</p>
-      </div>
+    <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 4px;">{{ producer.display_name }}</h1>
+    <p style="color: #888; margin: 0; font-size: 14px;">Manage your products by section, season, and surplus deals.</p>
+  {% else %}
+    <h1 style="font-size: 24px; font-weight: 600; margin: 0;">Producer Dashboard</h1>
+  {% endif %}
+</div>
 
-      <div class="d-flex flex-wrap gap-2">
-        <a class="btn btn-success" href="{% url 'products:add' %}">Add product</a>
-        <a class="btn btn-outline-primary" href="{% url 'producers:producer_reports' %}">Producer Reports</a>
-        <a class="btn btn-outline-dark" href="{% url 'producers:producer_orders' %}">Orders</a>
-        <a class="btn btn-outline-success" href="{% url 'content:content_dashboard' %}">Content</a>
+<!-- SEASON REMINDER -->
+{% if upcoming_season_products %}
+<div style="background: #e6f1fb; border: 1px solid #b5d4f4; border-radius: 10px; padding: 12px 16px; margin-bottom: 1.5rem;">
+  <p style="font-size: 14px; font-weight: 600; color: #185fa5; margin: 0 0 6px;">Season reminder</p>
+  <p style="font-size: 13px; color: #185fa5; margin: 0 0 8px;">The following products are due to become available next month:</p>
+  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+    {% for p in upcoming_season_products %}
+      <span style="background: #fff; border: 1px solid #b5d4f4; border-radius: 20px; padding: 3px 10px; font-size: 12px; color: #185fa5;">
+        {{ p.name }}{% if p.season_range_display %} ({{ p.season_range_display }}){% endif %}
+      </span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{% if not my_products %}
+<p style="color: #aaa; font-size: 14px;">No products yet. Use the sidebar to add your first product.</p>
+{% endif %}
+
+<!-- SURPLUS DEALS -->
+<div style="margin-bottom: 2.5rem;">
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+    <div style="width: 12px; height: 12px; border-radius: 3px; background: #E67E22;"></div>
+    <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: #1a1a1a;">Surplus Deals</h2>
+  </div>
+
+  {% if surplus_products %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+      {% for p in surplus_products %}
+      <div style="background: #fff; border: 1px solid #f4c06a; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+          <h3 style="font-size: 15px; font-weight: 600; margin: 0; color: #1a1a1a;">{{ p.name }}</h3>
+          <span style="background: #faeeda; color: #633806; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px;">{{ p.surplus_discount_percent }}% off</span>
+        </div>
+        <p style="font-size: 13px; color: #888; margin: 0 0 4px;">Stock: <strong style="color: #1a1a1a;">{{ p.stock }}</strong></p>
+        {% if p.surplus_expires_at %}<p style="font-size: 13px; color: #e24b4a; margin: 0 0 4px;">Expires: {{ p.surplus_expires_at }}</p>{% endif %}
+        {% if p.best_before_date %}<p style="font-size: 13px; color: #e24b4a; margin: 0 0 4px;">Best before: {{ p.best_before_date }}</p>{% endif %}
+        {% if p.surplus_note %}<p style="font-size: 13px; color: #888; margin: 0 0 8px;">{{ p.surplus_note|truncatechars:80 }}</p>{% endif %}
+
+        {% if p.ai_predicted_label %}
+        <div style="border-top: 1px solid #f0f0f0; padding-top: 10px; margin-top: 8px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+            <span style="font-size: 12px; color: #888;">AI:</span>
+            {% if p.ai_predicted_label == "fresh" %}<span class="ai-badge ai-fresh">Fresh</span>{% endif %}
+            {% if p.ai_predicted_label == "rotten" %}<span class="ai-badge ai-rotten">Rotten</span>{% endif %}
+            {% if p.ai_grade == "A" %}<span class="ai-badge ai-fresh">Grade A</span>{% endif %}
+            {% if p.ai_grade == "B" %}<span class="ai-badge ai-warn">Grade B</span>{% endif %}
+            {% if p.ai_grade == "C" %}<span class="ai-badge ai-rotten">Grade C</span>{% endif %}
+          </div>
+          {% if p.ai_action %}<p style="font-size: 12px; color: #555; margin: 0 0 4px;"><strong>Action:</strong> {{ p.ai_action }}</p>{% endif %}
+          {% if p.ai_colour_score %}<p style="font-size: 12px; color: #888; margin: 0 0 4px;">Scores — Colour: {{ p.ai_colour_score }}, Size: {{ p.ai_size_score }}, Ripeness: {{ p.ai_ripeness_score }}</p>{% endif %}
+          {% if p.ai_explanation %}
+          <details style="margin-top: 4px;">
+            <summary style="font-size: 12px; color: #1a6b3a; cursor: pointer;">View explanation</summary>
+            <div style="font-size: 12px; color: #888; margin-top: 6px; white-space: pre-wrap; background: #f8f9fa; border-radius: 6px; padding: 8px;">{{ p.ai_explanation }}</div>
+          </details>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="margin-top: auto; padding-top: 12px; display: flex; gap: 8px;">
+          <a href="{% url 'products:edit' p.id %}" class="prod-btn prod-btn-outline">Edit</a>
+          <form method="post" action="{% url 'products:delete' p.id %}">
+            {% csrf_token %}
+            <button type="submit" class="prod-btn prod-btn-danger">Delete</button>
+          </form>
+        </div>
       </div>
+      {% endfor %}
     </div>
   {% else %}
-    <h1 class="mb-3">Producer Dashboard</h1>
+    <p style="color: #aaa; font-size: 14px;">No surplus deals yet.</p>
   {% endif %}
-
-  {% if upcoming_season_products %}
-    <div class="alert alert-info">
-      <strong>Season reminder:</strong>
-      The following products are due to become available next month:
-      <ul class="mb-0 mt-2">
-        {% for p in upcoming_season_products %}
-          <li>{{ p.name }}{% if p.season_range_display %} ({{ p.season_range_display }}){% endif %}</li>
-        {% endfor %}
-      </ul>
-    </div>
-  {% endif %}
-
-  {% if not my_products %}
-    <p class="text-muted">No products yet.</p>
-  {% endif %}
-
-  <div class="mb-5">
-    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#E67E22;">
-      <strong>Surplus Deals</strong>
-    </div>
-
-    {% if surplus_products %}
-      <div class="row g-3">
-        {% for p in surplus_products %}
-          <div class="col-md-6 col-lg-4">
-            <div class="card shadow-sm h-100 rounded-4 border-warning">
-              <div class="card-body d-flex flex-column">
-                <h5 class="card-title">{{ p.name }}</h5>
-                <p class="small mb-1"><strong>Stock:</strong> {{ p.stock }}</p>
-                <p class="small mb-1"><strong>Deal:</strong> {{ p.surplus_discount_percent }}% off</p>
-                {% if p.surplus_expires_at %}
-                  <p class="small text-danger mb-1"><strong>Expires:</strong> {{ p.surplus_expires_at }}</p>
-                {% endif %}
-                {% if p.surplus_note %}
-                  <p class="small text-muted">{{ p.surplus_note|truncatechars:80 }}</p>
-                {% endif %}
-                {% if p.best_before_date %}
-                  <p class="small text-danger"><strong>Best before:</strong> {{ p.best_before_date }}</p>
-                {% endif %}
-
-                {% if p.ai_predicted_label %}
-                  <hr class="my-3">
-                  <div class="small">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                      <strong>AI:</strong>
-                      {% if p.ai_predicted_label == "fresh" %}
-                        <span class="badge bg-success">Fresh</span>
-                      {% elif p.ai_predicted_label == "rotten" %}
-                        <span class="badge bg-danger">Rotten</span>
-                      {% else %}
-                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
-                      {% endif %}
-                      {% if p.ai_grade == "A" %}
-                        <span class="badge bg-success">Grade A</span>
-                      {% elif p.ai_grade == "B" %}
-                        <span class="badge bg-warning text-dark">Grade B</span>
-                      {% elif p.ai_grade == "C" %}
-                        <span class="badge bg-danger">Grade C</span>
-                      {% endif %}
-                    </div>
-                    {% if p.ai_action %}
-                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
-                    {% endif %}
-                    {% if p.ai_colour_score %}
-                      <p class="small mb-1">
-                        <strong>Scores:</strong>
-                        Colour {{ p.ai_colour_score }},
-                        Size {{ p.ai_size_score }},
-                        Ripeness {{ p.ai_ripeness_score }}
-                      </p>
-                    {% endif %}
-                    {% if p.ai_explanation %}
-                      <details class="mt-2">
-                        <summary class="small text-primary">View explanation</summary>
-                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
-                      </details>
-                    {% endif %}
-                  </div>
-                {% endif %}
-
-                <div class="mt-auto d-flex gap-2">
-                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                  <form method="post" action="{% url 'products:delete' p.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="text-muted">No surplus deals yet.</p>
-    {% endif %}
-  </div>
-
-  <div class="mb-5">
-    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#4CAF50;">
-      <strong>Seasonal Items</strong>
-    </div>
-
-    {% if seasonal_products %}
-      <div class="row g-3">
-        {% for p in seasonal_products %}
-          <div class="col-md-6 col-lg-4">
-            <div class="card shadow-sm h-100 rounded-4">
-              <div class="card-body d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <h5 class="card-title mb-0">{{ p.name }}</h5>
-                  <span class="badge bg-secondary">£{{ p.price }}</span>
-                </div>
-                <p class="text-muted small mb-2">
-                  {{ p.description|default:"No description provided."|truncatechars:100 }}
-                </p>
-                <p class="small mb-1"><strong>Stock:</strong> {{ p.stock }}</p>
-                <p class="small mb-1"><strong>Status:</strong> {{ p.customer_status }}</p>
-                {% if p.season_range_display %}
-                  <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
-                {% endif %}
-                {% if p.ai_predicted_label %}
-                  <hr class="my-3">
-                  <div class="small">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                      <strong>AI:</strong>
-                      {% if p.ai_predicted_label == "fresh" %}
-                        <span class="badge bg-success">Fresh</span>
-                      {% elif p.ai_predicted_label == "rotten" %}
-                        <span class="badge bg-danger">Rotten</span>
-                      {% else %}
-                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
-                      {% endif %}
-                      {% if p.ai_grade == "A" %}
-                        <span class="badge bg-success">Grade A</span>
-                      {% elif p.ai_grade == "B" %}
-                        <span class="badge bg-warning text-dark">Grade B</span>
-                      {% elif p.ai_grade == "C" %}
-                        <span class="badge bg-danger">Grade C</span>
-                      {% endif %}
-                    </div>
-                    {% if p.ai_action %}
-                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
-                    {% endif %}
-                    {% if p.ai_colour_score %}
-                      <p class="small mb-1">
-                        <strong>Scores:</strong>
-                        Colour {{ p.ai_colour_score }},
-                        Size {{ p.ai_size_score }},
-                        Ripeness {{ p.ai_ripeness_score }}
-                      </p>
-                    {% endif %}
-                    {% if p.ai_explanation %}
-                      <details class="mt-2">
-                        <summary class="small text-primary">View explanation</summary>
-                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
-                      </details>
-                    {% endif %}
-                  </div>
-                {% endif %}
-                <div class="mt-3 d-flex gap-2">
-                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                  <form method="post" action="{% url 'products:delete' p.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="text-muted">No seasonal items yet.</p>
-    {% endif %}
-  </div>
-
-  <div class="mb-5">
-    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#FF5252;">
-      <strong>Discounted Items</strong>
-    </div>
-
-    {% if discounted_products %}
-      <div class="row g-3">
-        {% for p in discounted_products %}
-          <div class="col-md-6 col-lg-4">
-            <div class="card shadow-sm h-100 rounded-4 position-relative">
-              {% if p.discount_percent > 0 %}
-                <span class="badge bg-danger position-absolute top-0 start-0 m-2">
-                  {{ p.discount_percent }}% OFF
-                </span>
-              {% endif %}
-              <div class="card-body d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-start mb-2 mt-3">
-                  <h5 class="card-title mb-0">{{ p.name }}</h5>
-                  <span class="badge bg-secondary">£{{ p.price }}</span>
-                </div>
-                <p class="text-muted small mb-2">
-                  {{ p.description|default:"No description provided."|truncatechars:100 }}
-                </p>
-                {% if p.discount_percent > 0 %}
-                  <p class="mb-2">
-                    <span class="text-muted text-decoration-line-through">£{{ p.price }}</span>
-                    <span class="fw-bold text-danger ms-2">£{{ p.discounted_price|floatformat:2 }}</span>
-                  </p>
-                {% endif %}
-                <p class="small mb-1"><strong>Stock:</strong> {{ p.stock }}</p>
-                <p class="small mb-1"><strong>Status:</strong> {{ p.customer_status }}</p>
-                {% if p.season_range_display %}
-                  <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
-                {% endif %}
-                {% if p.ai_predicted_label %}
-                  <hr class="my-3">
-                  <div class="small">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                      <strong>AI:</strong>
-                      {% if p.ai_predicted_label == "fresh" %}
-                        <span class="badge bg-success">Fresh</span>
-                      {% elif p.ai_predicted_label == "rotten" %}
-                        <span class="badge bg-danger">Rotten</span>
-                      {% else %}
-                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
-                      {% endif %}
-                      {% if p.ai_grade == "A" %}
-                        <span class="badge bg-success">Grade A</span>
-                      {% elif p.ai_grade == "B" %}
-                        <span class="badge bg-warning text-dark">Grade B</span>
-                      {% elif p.ai_grade == "C" %}
-                        <span class="badge bg-danger">Grade C</span>
-                      {% endif %}
-                    </div>
-                    {% if p.ai_action %}
-                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
-                    {% endif %}
-                    {% if p.ai_colour_score %}
-                      <p class="small mb-1">
-                        <strong>Scores:</strong>
-                        Colour {{ p.ai_colour_score }},
-                        Size {{ p.ai_size_score }},
-                        Ripeness {{ p.ai_ripeness_score }}
-                      </p>
-                    {% endif %}
-                    {% if p.ai_explanation %}
-                      <details class="mt-2">
-                        <summary class="small text-primary">View explanation</summary>
-                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
-                      </details>
-                    {% endif %}
-                  </div>
-                {% endif %}
-                <div class="mt-3 d-flex gap-2">
-                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                  <form method="post" action="{% url 'products:delete' p.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="text-muted">No discounted items yet.</p>
-    {% endif %}
-  </div>
-
-  <div class="mb-5">
-    <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#2196F3;">
-      <strong>All Items</strong>
-    </div>
-
-    {% if all_products %}
-      <div class="row g-3">
-        {% for p in all_products %}
-          <div class="col-md-6 col-lg-4">
-            <div class="card shadow-sm h-100 rounded-4">
-              <div class="card-body d-flex flex-column">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <h5 class="card-title mb-0">{{ p.name }}</h5>
-                  <span class="badge bg-secondary">£{{ p.price }}</span>
-                </div>
-                <p class="text-muted small mb-2">
-                  {{ p.description|default:"No description provided."|truncatechars:100 }}
-                </p>
-                <p class="small mb-1"><strong>Stock:</strong> {{ p.stock }}</p>
-                <p class="small mb-1"><strong>Status:</strong> {{ p.customer_status }}</p>
-                {% if p.season_range_display %}
-                  <p class="small text-muted mb-2">Available: {{ p.season_range_display }}</p>
-                {% endif %}
-                {% if p.ai_predicted_label %}
-                  <hr class="my-3">
-                  <div class="small">
-                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                      <strong>AI:</strong>
-                      {% if p.ai_predicted_label == "fresh" %}
-                        <span class="badge bg-success">Fresh</span>
-                      {% elif p.ai_predicted_label == "rotten" %}
-                        <span class="badge bg-danger">Rotten</span>
-                      {% else %}
-                        <span class="badge bg-secondary">{{ p.ai_predicted_label|title }}</span>
-                      {% endif %}
-                      {% if p.ai_grade == "A" %}
-                        <span class="badge bg-success">Grade A</span>
-                      {% elif p.ai_grade == "B" %}
-                        <span class="badge bg-warning text-dark">Grade B</span>
-                      {% elif p.ai_grade == "C" %}
-                        <span class="badge bg-danger">Grade C</span>
-                      {% endif %}
-                    </div>
-                    {% if p.ai_action %}
-                      <p class="small mb-1"><strong>Action:</strong> {{ p.ai_action }}</p>
-                    {% endif %}
-                    {% if p.ai_colour_score %}
-                      <p class="small mb-1">
-                        <strong>Scores:</strong>
-                        Colour {{ p.ai_colour_score }},
-                        Size {{ p.ai_size_score }},
-                        Ripeness {{ p.ai_ripeness_score }}
-                      </p>
-                    {% endif %}
-                    {% if p.ai_explanation %}
-                      <details class="mt-2">
-                        <summary class="small text-primary">View explanation</summary>
-                        <div class="small text-muted mt-2" style="white-space: pre-wrap;">{{ p.ai_explanation }}</div>
-                      </details>
-                    {% endif %}
-                  </div>
-                {% endif %}
-                <div class="mt-3 d-flex gap-2">
-                  <a href="{% url 'products:edit' p.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
-                  <form method="post" action="{% url 'products:delete' p.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
-        {% endfor %}
-      </div>
-    {% else %}
-      <p class="text-muted">No regular items yet.</p>
-    {% endif %}
-  </div>
-
 </div>
+
+<!-- SEASONAL ITEMS -->
+<div style="margin-bottom: 2.5rem;">
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+    <div style="width: 12px; height: 12px; border-radius: 3px; background: #4CAF50;"></div>
+    <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: #1a1a1a;">Seasonal Items</h2>
+  </div>
+
+  {% if seasonal_products %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+      {% for p in seasonal_products %}
+      <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+          <h3 style="font-size: 15px; font-weight: 600; margin: 0; color: #1a1a1a;">{{ p.name }}</h3>
+          <span style="background: #f0f0f0; color: #555; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px;">£{{ p.price }}</span>
+        </div>
+        <p style="font-size: 13px; color: #888; margin: 0 0 6px;">{{ p.description|default:"No description provided."|truncatechars:100 }}</p>
+        <p style="font-size: 13px; color: #888; margin: 0 0 4px;">Stock: <strong style="color: #1a1a1a;">{{ p.stock }}</strong></p>
+        <p style="font-size: 13px; color: #888; margin: 0 0 4px;">Status: <strong style="color: #1a1a1a;">{{ p.customer_status }}</strong></p>
+        {% if p.season_range_display %}<p style="font-size: 12px; color: #aaa; margin: 0 0 8px;">Available: {{ p.season_range_display }}</p>{% endif %}
+
+        {% if p.ai_predicted_label %}
+        <div style="border-top: 1px solid #f0f0f0; padding-top: 10px; margin-top: 8px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+            <span style="font-size: 12px; color: #888;">AI:</span>
+            {% if p.ai_predicted_label == "fresh" %}<span class="ai-badge ai-fresh">Fresh</span>{% endif %}
+            {% if p.ai_predicted_label == "rotten" %}<span class="ai-badge ai-rotten">Rotten</span>{% endif %}
+            {% if p.ai_grade == "A" %}<span class="ai-badge ai-fresh">Grade A</span>{% endif %}
+            {% if p.ai_grade == "B" %}<span class="ai-badge ai-warn">Grade B</span>{% endif %}
+            {% if p.ai_grade == "C" %}<span class="ai-badge ai-rotten">Grade C</span>{% endif %}
+          </div>
+          {% if p.ai_action %}<p style="font-size: 12px; color: #555; margin: 0 0 4px;"><strong>Action:</strong> {{ p.ai_action }}</p>{% endif %}
+          {% if p.ai_explanation %}
+          <details style="margin-top: 4px;">
+            <summary style="font-size: 12px; color: #1a6b3a; cursor: pointer;">View explanation</summary>
+            <div style="font-size: 12px; color: #888; margin-top: 6px; white-space: pre-wrap; background: #f8f9fa; border-radius: 6px; padding: 8px;">{{ p.ai_explanation }}</div>
+          </details>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="margin-top: auto; padding-top: 12px; display: flex; gap: 8px;">
+          <a href="{% url 'products:edit' p.id %}" class="prod-btn prod-btn-outline">Edit</a>
+          <form method="post" action="{% url 'products:delete' p.id %}">
+            {% csrf_token %}
+            <button type="submit" class="prod-btn prod-btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="color: #aaa; font-size: 14px;">No seasonal items yet.</p>
+  {% endif %}
+</div>
+
+<!-- DISCOUNTED ITEMS -->
+<div style="margin-bottom: 2.5rem;">
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+    <div style="width: 12px; height: 12px; border-radius: 3px; background: #FF5252;"></div>
+    <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: #1a1a1a;">Discounted Items</h2>
+  </div>
+
+  {% if discounted_products %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+      {% for p in discounted_products %}
+      <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; position: relative;">
+        {% if p.discount_percent > 0 %}
+          <span style="position: absolute; top: 12px; left: 12px; background: #e24b4a; color: #fff; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px;">{{ p.discount_percent }}% OFF</span>
+        {% endif %}
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; {% if p.discount_percent > 0 %}margin-top: 24px;{% endif %}">
+          <h3 style="font-size: 15px; font-weight: 600; margin: 0; color: #1a1a1a;">{{ p.name }}</h3>
+          <span style="background: #f0f0f0; color: #555; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px;">£{{ p.price }}</span>
+        </div>
+        <p style="font-size: 13px; color: #888; margin: 0 0 6px;">{{ p.description|default:"No description provided."|truncatechars:100 }}</p>
+        {% if p.discount_percent > 0 %}
+          <p style="margin: 0 0 6px;">
+            <span style="font-size: 13px; color: #aaa; text-decoration: line-through;">£{{ p.price }}</span>
+            <span style="font-size: 14px; font-weight: 600; color: #e24b4a; margin-left: 6px;">£{{ p.discounted_price|floatformat:2 }}</span>
+          </p>
+        {% endif %}
+        <p style="font-size: 13px; color: #888; margin: 0 0 4px;">Stock: <strong style="color: #1a1a1a;">{{ p.stock }}</strong></p>
+        <p style="font-size: 13px; color: #888; margin: 0 0 4px;">Status: <strong style="color: #1a1a1a;">{{ p.customer_status }}</strong></p>
+
+        {% if p.ai_predicted_label %}
+        <div style="border-top: 1px solid #f0f0f0; padding-top: 10px; margin-top: 8px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+            <span style="font-size: 12px; color: #888;">AI:</span>
+            {% if p.ai_predicted_label == "fresh" %}<span class="ai-badge ai-fresh">Fresh</span>{% endif %}
+            {% if p.ai_predicted_label == "rotten" %}<span class="ai-badge ai-rotten">Rotten</span>{% endif %}
+            {% if p.ai_grade == "A" %}<span class="ai-badge ai-fresh">Grade A</span>{% endif %}
+            {% if p.ai_grade == "B" %}<span class="ai-badge ai-warn">Grade B</span>{% endif %}
+            {% if p.ai_grade == "C" %}<span class="ai-badge ai-rotten">Grade C</span>{% endif %}
+          </div>
+          {% if p.ai_action %}<p style="font-size: 12px; color: #555; margin: 0 0 4px;"><strong>Action:</strong> {{ p.ai_action }}</p>{% endif %}
+          {% if p.ai_explanation %}
+          <details style="margin-top: 4px;">
+            <summary style="font-size: 12px; color: #1a6b3a; cursor: pointer;">View explanation</summary>
+            <div style="font-size: 12px; color: #888; margin-top: 6px; white-space: pre-wrap; background: #f8f9fa; border-radius: 6px; padding: 8px;">{{ p.ai_explanation }}</div>
+          </details>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="margin-top: auto; padding-top: 12px; display: flex; gap: 8px;">
+          <a href="{% url 'products:edit' p.id %}" class="prod-btn prod-btn-outline">Edit</a>
+          <form method="post" action="{% url 'products:delete' p.id %}">
+            {% csrf_token %}
+            <button type="submit" class="prod-btn prod-btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="color: #aaa; font-size: 14px;">No discounted items yet.</p>
+  {% endif %}
+</div>
+
+<!-- ALL ITEMS -->
+<div style="margin-bottom: 2.5rem;">
+  <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 1rem;">
+    <div style="width: 12px; height: 12px; border-radius: 3px; background: #2196F3;"></div>
+    <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: #1a1a1a;">All Items</h2>
+  </div>
+
+  {% if all_products %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+      {% for p in all_products %}
+      <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+          <h3 style="font-size: 15px; font-weight: 600; margin: 0; color: #1a1a1a;">{{ p.name }}</h3>
+          <span style="background: #f0f0f0; color: #555; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px;">£{{ p.price }}</span>
+        </div>
+        <p style="font-size: 13px; color: #888; margin: 0 0 6px;">{{ p.description|default:"No description provided."|truncatechars:100 }}</p>
+        <p style="font-size: 13px; color: #888; margin: 0 0 4px;">Stock: <strong style="color: #1a1a1a;">{{ p.stock }}</strong></p>
+        <p style="font-size: 13px; color: #888; margin: 0 0 4px;">Status: <strong style="color: #1a1a1a;">{{ p.customer_status }}</strong></p>
+        {% if p.season_range_display %}<p style="font-size: 12px; color: #aaa; margin: 0 0 8px;">Available: {{ p.season_range_display }}</p>{% endif %}
+
+        {% if p.ai_predicted_label %}
+        <div style="border-top: 1px solid #f0f0f0; padding-top: 10px; margin-top: 8px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;">
+            <span style="font-size: 12px; color: #888;">AI:</span>
+            {% if p.ai_predicted_label == "fresh" %}<span class="ai-badge ai-fresh">Fresh</span>{% endif %}
+            {% if p.ai_predicted_label == "rotten" %}<span class="ai-badge ai-rotten">Rotten</span>{% endif %}
+            {% if p.ai_grade == "A" %}<span class="ai-badge ai-fresh">Grade A</span>{% endif %}
+            {% if p.ai_grade == "B" %}<span class="ai-badge ai-warn">Grade B</span>{% endif %}
+            {% if p.ai_grade == "C" %}<span class="ai-badge ai-rotten">Grade C</span>{% endif %}
+          </div>
+          {% if p.ai_action %}<p style="font-size: 12px; color: #555; margin: 0 0 4px;"><strong>Action:</strong> {{ p.ai_action }}</p>{% endif %}
+          {% if p.ai_explanation %}
+          <details style="margin-top: 4px;">
+            <summary style="font-size: 12px; color: #1a6b3a; cursor: pointer;">View explanation</summary>
+            <div style="font-size: 12px; color: #888; margin-top: 6px; white-space: pre-wrap; background: #f8f9fa; border-radius: 6px; padding: 8px;">{{ p.ai_explanation }}</div>
+          </details>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <div style="margin-top: auto; padding-top: 12px; display: flex; gap: 8px;">
+          <a href="{% url 'products:edit' p.id %}" class="prod-btn prod-btn-outline">Edit</a>
+          <form method="post" action="{% url 'products:delete' p.id %}">
+            {% csrf_token %}
+            <button type="submit" class="prod-btn prod-btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="color: #aaa; font-size: 14px;">No regular items yet.</p>
+  {% endif %}
+</div>
+
+<style>
+  .ai-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    display: inline-block;
+  }
+  .ai-fresh { background: #eaf3de; color: #27500a; }
+  .ai-rotten { background: #fcebeb; color: #a32d2d; }
+  .ai-warn { background: #faeeda; color: #633806; }
+
+  .prod-btn {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    border: none;
+  }
+  .prod-btn-outline {
+    background: transparent;
+    color: #333;
+    border: 1px solid #ddd;
+  }
+  .prod-btn-outline:hover { background: #f8f9fa; color: #333; text-decoration: none; }
+  .prod-btn-danger {
+    background: transparent;
+    color: #e24b4a;
+    border: 1px solid #e24b4a;
+  }
+  .prod-btn-danger:hover { background: #fcebeb; }
+</style>
+
 {% endblock %}

@@ -3,99 +3,163 @@
 {% block title %}Customers | Manager Dashboard{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <h1>Customers</h1>
-    <ul class="nav nav-tabs mb-3">
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/orders/' in request.path %}active{% endif %}" href="{% url 'manager_orders' %}">Orders</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/customers/' in request.path %}active{% endif %}" href="{% url 'manager_customers' %}">Customers</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/producers/' in request.path %}active{% endif %}" href="{% url 'manager_producers' %}">Producers</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/financial-reports' in request.path %}active{% endif %}" href="{% url 'manager_financial_reports' %}">Financial Reports</a>
-        </li>
-    </ul>
 
-        <div class="table-responsive shadow-sm rounded bg-white p-3">
-                <table class="table table-hover align-middle">
-            <thead class="table-light">
-                <tr>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Address</th>
-                    <th>Postcode</th>
-                    <th>Joined</th>
-                </tr>
+<!-- HEADER -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 4px;">Customers</h1>
+    <p style="color: #888; margin: 0; font-size: 14px;">Browse and inspect customer accounts.</p>
+  </div>
+</div>
+
+<!-- NAV TABS -->
+<div style="border-bottom: 1px solid #e5e5e0; margin-bottom: 2rem;">
+  <nav style="display: flex; gap: 4px;">
+    <a href="{% url 'manager_orders' %}" class="mgr-tab {% if '/manager/orders/' in request.path %}mgr-tab-active{% endif %}">Orders</a>
+    <a href="{% url 'manager_customers' %}" class="mgr-tab {% if '/manager/customers/' in request.path %}mgr-tab-active{% endif %}">Customers</a>
+    <a href="{% url 'manager_producers' %}" class="mgr-tab {% if '/manager/producers/' in request.path %}mgr-tab-active{% endif %}">Producers</a>
+    <a href="{% url 'manager_financial_reports' %}" class="mgr-tab {% if '/manager/financial-reports' in request.path %}mgr-tab-active{% endif %}">Financial Reports</a>
+  </nav>
+</div>
+
+<!-- TABLE -->
+<div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; overflow: hidden;">
+  <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+    <thead>
+      <tr style="background: #f8f9fa; border-bottom: 1px solid #e5e5e0;">
+        <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Username</th>
+        <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Email</th>
+        <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Address</th>
+        <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Postcode</th>
+        <th style="padding: 12px 16px; font-weight: 600; color: #555; text-align: left;">Joined</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in customers %}
+      <tr style="border-bottom: 1px solid #f0f0f0;" class="tbl-row">
+        <td style="padding: 12px 16px;">
+          <a href="#" data-bs-toggle="modal" data-bs-target="#customerModal{{ u.id }}"
+             style="color: #1a6b3a; font-weight: 500; text-decoration: none;">
+            {{ u.username }}
+          </a>
+        </td>
+        <td style="padding: 12px 16px; color: #555;">{{ u.email }}</td>
+        <td style="padding: 12px 16px; color: #555;">{{ u.userprofile.address|default:'–' }}</td>
+        <td style="padding: 12px 16px; color: #555;">{{ u.userprofile.postcode|default:'–' }}</td>
+        <td style="padding: 12px 16px; color: #888; font-size: 13px;">{{ u.date_joined|date:"Y-m-d" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" style="padding: 2rem; text-align: center; color: #aaa; font-size: 14px;">No customers found.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- MODALS -->
+{% for u in customers %}
+<div class="modal fade" id="customerModal{{ u.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content" style="border-radius: 12px; border: 1px solid #e5e5e0;">
+
+      <div class="modal-header" style="border-bottom: 1px solid #e5e5e0; padding: 1.25rem 1.5rem;">
+        <div>
+          <h5 style="margin: 0 0 2px; font-size: 16px; font-weight: 600;">{{ u.username }}</h5>
+          <p style="margin: 0; font-size: 13px; color: #888;">Customer profile</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body" style="padding: 1.5rem;">
+
+        <!-- CUSTOMER DETAILS -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1.5rem;">
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 12px 16px;">
+            <p style="font-size: 11px; color: #aaa; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">Email</p>
+            <p style="font-size: 14px; color: #333; margin: 0; font-weight: 500;">{{ u.email }}</p>
+          </div>
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 12px 16px;">
+            <p style="font-size: 11px; color: #aaa; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">Joined</p>
+            <p style="font-size: 14px; color: #333; margin: 0; font-weight: 500;">{{ u.date_joined|date:"Y-m-d" }}</p>
+          </div>
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 12px 16px;">
+            <p style="font-size: 11px; color: #aaa; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">Address</p>
+            <p style="font-size: 14px; color: #333; margin: 0; font-weight: 500;">{{ u.userprofile.address|default:'–' }}</p>
+          </div>
+          <div style="background: #f8f9fa; border-radius: 8px; padding: 12px 16px;">
+            <p style="font-size: 11px; color: #aaa; margin: 0 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">Postcode</p>
+            <p style="font-size: 14px; color: #333; margin: 0; font-weight: 500;">{{ u.userprofile.postcode|default:'–' }}</p>
+          </div>
+        </div>
+
+        <!-- ORDERS -->
+        <p style="font-size: 13px; font-weight: 600; color: #555; margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.5px;">Previous Orders</p>
+
+        {% if u.orders.all %}
+        <div style="background: #fff; border: 1px solid #e5e5e0; border-radius: 10px; overflow: hidden;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+              <tr style="background: #f8f9fa; border-bottom: 1px solid #e5e5e0;">
+                <th style="padding: 10px 14px; font-weight: 600; color: #555;">#</th>
+                <th style="padding: 10px 14px; font-weight: 600; color: #555;">Total</th>
+                <th style="padding: 10px 14px; font-weight: 600; color: #555;">Status</th>
+                <th style="padding: 10px 14px; font-weight: 600; color: #555;">Date</th>
+              </tr>
             </thead>
             <tbody>
-                {% for u in customers %}
-                <tr>
-                    <td>
-                        <a href="#" data-bs-toggle="modal" data-bs-target="#customerModal{{ u.id }}">{{ u.username }}</a>
-                    </td>
-                    <td>{{ u.email }}</td>
-                    <td>{{ u.userprofile.address|default:'–' }}</td>
-                    <td>{{ u.userprofile.postcode|default:'–' }}</td>
-                    <td>{{ u.date_joined|date:"Y-m-d" }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" class="text-muted">No customers found.</td></tr>
-                {% endfor %}
-                        </tbody>
-                </table>
-                {% comment %} Render modals outside the table to avoid them appearing inline in table markup {% endcomment %}
-                {% for u in customers %}
-                <div class="modal fade" id="customerModal{{ u.id }}" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-                                <div class="modal-content">
-                                        <div class="modal-header">
-                                                <h5 class="modal-title">Customer: {{ u.username }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                                <dl class="row">
-                                                        <dt class="col-sm-3">Email</dt><dd class="col-sm-9">{{ u.email }}</dd>
-                                                        <dt class="col-sm-3">Address</dt><dd class="col-sm-9">{{ u.userprofile.address|default:'–' }}</dd>
-                                                        <dt class="col-sm-3">Postcode</dt><dd class="col-sm-9">{{ u.userprofile.postcode|default:'–' }}</dd>
-                                                        <dt class="col-sm-3">Joined</dt><dd class="col-sm-9">{{ u.date_joined|date:"Y-m-d" }}</dd>
-                                                </dl>
+              {% for o in u.orders.all %}
+              <tr style="border-bottom: 1px solid #f0f0f0;">
+                <td style="padding: 10px 14px; color: #888;">{{ forloop.counter }}</td>
+                <td style="padding: 10px 14px; font-weight: 500; color: #1a1a1a;">£{{ o.total_amount }}</td>
+                <td style="padding: 10px 14px;">
+                  <span style="background: #eaf3de; color: #27500a; font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px;">
+                    {{ o.get_status_display }}
+                  </span>
+                </td>
+                <td style="padding: 10px 14px; color: #888;">{{ o.created_at|date:"Y-m-d H:i" }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" style="padding: 1rem; text-align: center; color: #aaa;">No orders.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+          <p style="color: #aaa; font-size: 13px;">No orders found for this customer.</p>
+        {% endif %}
 
-                                                <h6 class="mt-3">Previous orders</h6>
-                                                {% if u.orders.all %}
-                                                    <div class="table-responsive">
-                                                        <table class="table table-sm table-striped">
-                                                            <thead>
-                                                                <tr><th>#</th><th>Total</th><th>Status</th><th>When</th></tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {% for o in u.orders.all %}
-                                                                    <tr>
-                                                                        <td>{{ forloop.counter }}</td>
-                                                                        <td>£{{ o.total_amount }}</td>
-                                                                        <td>{{ o.get_status_display }}</td>
-                                                                        <td>{{ o.created_at|date:"Y-m-d H:i" }}</td>
-                                                                    </tr>
-                                                                {% empty %}
-                                                                    <tr><td colspan="4" class="text-muted">No orders.</td></tr>
-                                                                {% endfor %}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                {% else %}
-                                                    <p class="text-muted">No orders found for this customer.</p>
-                                                {% endif %}
-                                        </div>
-                                        <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        </div>
-                                </div>
-                        </div>
-                </div>
-                {% endfor %}
+      </div>
+
+      <div class="modal-footer" style="border-top: 1px solid #e5e5e0; padding: 1rem 1.5rem;">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+
     </div>
+  </div>
 </div>
+{% endfor %}
+
+<style>
+  .tbl-row:hover { background: #f8f9fa; }
+  .mgr-tab {
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid transparent;
+    color: #666;
+  }
+  .mgr-tab:hover { color: #1a6b3a; text-decoration: none; }
+  .mgr-tab-active {
+    background: #fff;
+    border-color: #e5e5e0;
+    border-bottom-color: #fff;
+    color: #1a6b3a;
+  }
+</style>
+
 {% endblock %}

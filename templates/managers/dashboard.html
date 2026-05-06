@@ -3,70 +3,142 @@
 {% block title %}Manager Dashboard | BRFN{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <h1>Manager Dashboard</h1>
-    <ul class="nav nav-tabs mb-3">
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/orders/' in request.path %}active{% endif %}" href="{% url 'manager_orders' %}">Orders</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/customers/' in request.path %}active{% endif %}" href="{% url 'manager_customers' %}">Customers</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/producers/' in request.path %}active{% endif %}" href="{% url 'manager_producers' %}">Producers</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link {% if '/manager/financial-reports' in request.path %}active{% endif %}" href="{% url 'manager_financial_reports' %}">Financial Reports</a>
-        </li>
-    </ul>
-    <p>Welcome to the manager area</p>
-    
-    <div class="row mt-4">
-        <div class="col-md-3 d-none">
-            <div class="card shadow-sm h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Overview</h5>
-                    <p class="card-text">Manager dashboard summary and KPIs (coming).</p>
-                    <a href="{% url 'manager_dashboard' %}" class="btn btn-outline-primary mt-auto">Dashboard Home</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Orders</h5>
-                    <p class="card-text">View and manage recent orders.</p>
-                    <a href="{% url 'manager_orders' %}" class="btn btn-primary mt-auto">View Orders</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Customers</h5>
-                    <p class="card-text">Browse and inspect customer accounts.</p>
-                    <a href="{% url 'manager_customers' %}" class="btn btn-primary mt-auto">View Customers</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Producers</h5>
-                    <p class="card-text">Manage producer records and contact details.</p>
-                    <a href="{% url 'manager_producers' %}" class="btn btn-primary mt-auto">View Producers</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm h-100">
-                <div class="card-body d-flex flex-column">
-                    <h5 class="card-title">Financial Reports</h5>
-                    <p class="card-text">Network commission audit, monthly summaries and CSV export.</p>
-                    <a href="{% url 'manager_financial_reports' %}" class="btn btn-primary mt-auto">View Reports</a>
-                </div>
-            </div>
-        </div>
-    </div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 style="font-size: 24px; font-weight: 600; margin: 0 0 4px;">Manager Dashboard</h1>
+    <p style="color: #888; margin: 0; font-size: 14px;">Welcome back — here's an overview of the network.</p>
+  </div>
 </div>
+
+<!-- NAV TABS -->
+<div style="border-bottom: 1px solid #e5e5e0; margin-bottom: 2rem;">
+  <nav style="display: flex; gap: 4px;">
+    <a href="{% url 'manager_orders' %}"
+       class="mgr-tab {% if '/manager/orders/' in request.path %}mgr-tab-active{% endif %}">
+      Orders
+    </a>
+    <a href="{% url 'manager_customers' %}"
+       class="mgr-tab {% if '/manager/customers/' in request.path %}mgr-tab-active{% endif %}">
+      Customers
+    </a>
+    <a href="{% url 'manager_producers' %}"
+       class="mgr-tab {% if '/manager/producers/' in request.path %}mgr-tab-active{% endif %}">
+      Producers
+    </a>
+    <a href="{% url 'manager_financial_reports' %}"
+       class="mgr-tab {% if '/manager/financial-reports' in request.path %}mgr-tab-active{% endif %}">
+      Financial Reports
+    </a>
+  </nav>
+</div>
+
+<!-- DASHBOARD CARDS -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px;">
+
+  <div class="mgr-card">
+    <div class="mgr-card-icon" style="background: #e6f1fb;">
+      <img src="/media/icons/receipt.png" alt="" width="20" height="20">
+    </div>
+    <h3 class="mgr-card-title">Orders</h3>
+    <p class="mgr-card-text">View and manage recent orders across the network.</p>
+    <a href="{% url 'manager_orders' %}" class="mgr-card-btn mgr-btn-green">View Orders</a>
+  </div>
+
+  <div class="mgr-card">
+    <div class="mgr-card-icon" style="background: #eaf3de;">
+      <img src="/media/icons/shopping-bag.png" alt="" width="20" height="20">
+    </div>
+    <h3 class="mgr-card-title">Customers</h3>
+    <p class="mgr-card-text">Browse and inspect customer accounts and activity.</p>
+    <a href="{% url 'manager_customers' %}" class="mgr-card-btn mgr-btn-green">View Customers</a>
+  </div>
+
+  <div class="mgr-card">
+    <div class="mgr-card-icon" style="background: #faeeda;">
+      <img src="/media/icons/tractor.png" alt="" width="20" height="20">
+    </div>
+    <h3 class="mgr-card-title">Producers</h3>
+    <p class="mgr-card-text">Manage producer records and contact details.</p>
+    <a href="{% url 'manager_producers' %}" class="mgr-card-btn mgr-btn-amber">View Producers</a>
+  </div>
+
+  <div class="mgr-card">
+    <div class="mgr-card-icon" style="background: #fbeaf0;">
+      <img src="/media/icons/file-text.png" alt="" width="20" height="20">
+    </div>
+    <h3 class="mgr-card-title">Financial Reports</h3>
+    <p class="mgr-card-text">Network commission audit, monthly summaries and CSV export.</p>
+    <a href="{% url 'manager_financial_reports' %}" class="mgr-card-btn mgr-btn-green">View Reports</a>
+  </div>
+
+</div>
+
+<style>
+  .mgr-tab {
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    border-radius: 8px 8px 0 0;
+    border: 1px solid transparent;
+    color: #666;
+  }
+  .mgr-tab:hover {
+    color: #1a6b3a;
+    text-decoration: none;
+  }
+  .mgr-tab-active {
+    background: #fff;
+    border-color: #e5e5e0;
+    border-bottom-color: #fff;
+    color: #1a6b3a;
+  }
+  .mgr-card {
+    background: #fff;
+    border: 1px solid #e5e5e0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .mgr-card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+  }
+  .mgr-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin: 0 0 6px;
+  }
+  .mgr-card-text {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+    margin: 0 0 1.25rem;
+    flex: 1;
+  }
+  .mgr-card-btn {
+    display: block;
+    text-align: center;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .mgr-btn-green { background: #1a6b3a; color: #fff; }
+  .mgr-btn-green:hover { background: #0f4a28; color: #fff; text-decoration: none; }
+  .mgr-btn-amber { background: #f4b400; color: #412402; }
+  .mgr-btn-amber:hover { background: #e3a400; color: #412402; text-decoration: none; }
+</style>
+
 {% endblock %}

@@ -1,51 +1,148 @@
 {% extends "base/base.html" %}
 {% load static %}
-
 {% block title %}Login{% endblock %}
-
 {% block content %}
-<div class="login-page">
-    <div class="login-box">
-        <h2 class="login-title">Welcome Back</h2>
-        <p class="login-subtitle">Login with your username and password</p>
 
-        <form method="post">
-            {% csrf_token %}
-
-            <div class="form-group">
-                <label for="id_username">Username</label>
-                {{ form.username }}
-            </div>
-
-            <div class="form-group">
-                <label for="id_password">Password</label>
-                <div class="password-wrapper">
-                    {{ form.password }}
-                    <button type="button" class="show-password-btn" onclick="togglePassword()">
-                        Show
-                    </button>
-                </div>
-            </div>
-
-            <button type="submit" class="login-btn">Login</button>
-        </form>
+<div style="display: flex; justify-content: center; padding: 3rem 1rem;">
+  <div class="login-card">
+    <div class="login-header">
+      <h2>Welcome back</h2>
+      <p>Sign in to your account</p>
     </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="id_username">Username</label>
+        <div class="input-wrapper">
+          <i class="ti ti-user input-icon"></i>
+          {{ form.username }}
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="id_password">Password</label>
+        <div class="input-wrapper">
+          <i class="ti ti-lock input-icon"></i>
+          {{ form.password }}
+          <button type="button" class="eye-btn" onclick="togglePassword()" aria-label="Toggle password">
+            <i class="ti ti-eye" id="eye-icon"></i>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="login-btn">Sign in</button>
+    </form>
+  </div>
 </div>
 
+<style>
+  .login-card {
+    background: #fff;
+    border: 1px solid #e5e5e0;
+    border-radius: 14px;
+    padding: 2.5rem 2rem;
+    width: 100%;
+    max-width: 400px;
+  }
+  .login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  .login-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #d4edda;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 22px;
+    color: #1a6b3a;
+  }
+  .login-header h2 {
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0 0 4px;
+    color: #1a1a1a;
+  }
+  .login-header p {
+    font-size: 14px;
+    color: #888;
+    margin: 0;
+  }
+  .form-group {
+    margin-bottom: 1rem;
+  }
+  .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 6px;
+  }
+  .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-icon {
+    position: absolute;
+    left: 10px;
+    font-size: 16px;
+    color: #aaa;
+    pointer-events: none;
+  }
+  .input-wrapper input {
+    width: 100%;
+    padding: 10px 12px 10px 34px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    box-sizing: border-box;
+  }
+  .input-wrapper input:focus {
+    border-color: #1a6b3a;
+    box-shadow: 0 0 0 3px rgba(26,107,58,0.12);
+  }
+  .eye-btn {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #aaa;
+    font-size: 17px;
+    padding: 4px;
+  }
+  .login-btn {
+    width: 100%;
+    padding: 10px;
+    background: #1a6b3a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+  .login-btn:hover {
+    background: #0f4a28;
+  }
+</style>
+
 <script>
-    function togglePassword() {
-        const passwordInput = document.getElementById("id_password");
-        const toggleBtn = document.querySelector(".show-password-btn");
-
-        if (!passwordInput) return;
-
-        if (passwordInput.type === "password") {
-            passwordInput.type = "text";
-            toggleBtn.textContent = "Hide";
-        } else {
-            passwordInput.type = "password";
-            toggleBtn.textContent = "Show";
-        }
+  function togglePassword() {
+    const pw = document.getElementById("id_password");
+    const icon = document.getElementById("eye-icon");
+    if (pw.type === "password") {
+      pw.type = "text";
+      icon.className = "ti ti-eye-off";
+    } else {
+      pw.type = "password";
+      icon.className = "ti ti-eye";
     }
+  }
 </script>
+
 {% endblock %}
