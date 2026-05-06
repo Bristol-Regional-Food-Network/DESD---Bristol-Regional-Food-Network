@@ -1,0 +1,104 @@
+{% extends "base/base.html" %}
+
+{% block title %}Content — {{ producer.display_name }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="mb-1">Content</h1>
+      <p class="text-muted mb-0">Manage your recipes and farm stories.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a href="{% url 'content:add_recipe' %}" class="btn btn-success">+ Add Recipe</a>
+      <a href="{% url 'content:add_story' %}" class="btn btn-outline-success">+ Add Farm Story</a>
+      <a href="{% url 'producers:producer_dashboard' %}" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Recipes -->
+  <div class="mb-5">
+    <h3 class="mb-3">Recipes</h3>
+    {% if recipes %}
+      <div class="row g-3">
+        {% for recipe in recipes %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4">
+              {% if recipe.image %}
+                <img src="{{ recipe.image.url }}" class="card-img-top rounded-top-4" style="height:160px;object-fit:cover;" alt="{{ recipe.title }}">
+              {% endif %}
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h5 class="card-title mb-0">{{ recipe.title }}</h5>
+                  {% if recipe.is_published %}
+                    <span class="badge bg-success">Published</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Draft</span>
+                  {% endif %}
+                </div>
+                <p class="text-muted small mb-2">{{ recipe.description|truncatechars:80 }}</p>
+                <p class="small mb-1"><strong>Season:</strong> {{ recipe.get_seasonal_tag_display }}</p>
+                {% if recipe.linked_products.exists %}
+                  <p class="small mb-2"><strong>Linked products:</strong>
+                    {% for p in recipe.linked_products.all %}{{ p.name }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                  </p>
+                {% endif %}
+                <div class="mt-auto d-flex gap-2">
+                  <a href="{% url 'content:edit_recipe' recipe.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'content:delete_recipe' recipe.id %}" onsubmit="return confirm('Delete this recipe?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                  {% if recipe.is_published %}
+                    <a href="{% url 'content:recipe_detail' recipe.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">View</a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No recipes yet. <a href="{% url 'content:add_recipe' %}">Add your first recipe</a>.</p>
+    {% endif %}
+  </div>
+
+  <!-- Farm Stories -->
+  <div class="mb-5">
+    <h3 class="mb-3">Farm Stories</h3>
+    {% if stories %}
+      <div class="row g-3">
+        {% for story in stories %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm h-100 rounded-4">
+              {% if story.image %}
+                <img src="{{ story.image.url }}" class="card-img-top rounded-top-4" style="height:160px;object-fit:cover;" alt="{{ story.title }}">
+              {% endif %}
+              <div class="card-body d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h5 class="card-title mb-0">{{ story.title }}</h5>
+                  {% if story.is_published %}
+                    <span class="badge bg-success">Published</span>
+                  {% else %}
+                    <span class="badge bg-secondary">Draft</span>
+                  {% endif %}
+                </div>
+                <p class="text-muted small mb-2">{{ story.content|truncatechars:100 }}</p>
+                <div class="mt-auto d-flex gap-2">
+                  <a href="{% url 'content:edit_story' story.id %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                  <form method="post" action="{% url 'content:delete_story' story.id %}" onsubmit="return confirm('Delete this story?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="text-muted">No farm stories yet. <a href="{% url 'content:add_story' %}">Add your first story</a>.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

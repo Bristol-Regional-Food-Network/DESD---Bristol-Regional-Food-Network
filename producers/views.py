@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
 
+from products.models import Product, StockAlert
 from basket.models import Order, OrderItem, OrderStatusHistory
 from products.models import Product
 from users.decorators import role_required
@@ -284,6 +285,7 @@ def dashboard(request):
                 "surplus_products": [],
                 "all_products": [],
                 "upcoming_season_products": [],
+                "active_stock_alerts": [],
             },
         )
 
@@ -293,6 +295,11 @@ def dashboard(request):
     surplus_products = my_products.filter(section=Product.SECTION_SURPLUS)
     all_products = my_products.filter(section=Product.SECTION_ALL)
     upcoming_season_products = [p for p in my_products if p.season_starts_next_month]
+
+    active_stock_alerts = StockAlert.objects.filter(
+        product__producer=producer,
+        is_resolved=False,
+    ).select_related("product")
 
     return render(
         request,
@@ -305,6 +312,7 @@ def dashboard(request):
             "surplus_products": surplus_products,
             "all_products": all_products,
             "upcoming_season_products": upcoming_season_products,
+            "active_stock_alerts": active_stock_alerts,
         },
     )
 

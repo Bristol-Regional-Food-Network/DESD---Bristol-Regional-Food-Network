@@ -3,6 +3,8 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 from users.views import register, customer_register, producer_register, community_group_register, restaurant_register, employee_register, pending_employees, approve_employee
 
@@ -18,7 +20,6 @@ urlpatterns = [
     path("", include("core.urls")),
 
     # Auth
-    # Registration paths
     path("register/", register, name="register"),
     path("register/customer/", customer_register, name="customer_register"),
     path("register/producer/", producer_register, name="producer_register"),
@@ -46,7 +47,7 @@ urlpatterns = [
     path("manager/", include("managers.urls")),
     path("basket/", include("basket.urls")),
     path("ai-engineer/", include("ai_engineer.urls")),
-    
+    path("content/", include("content.urls")),
 
     # API
     path("api/products/", product_api_views.api_product_collection, name="api_products_collection"),
@@ -55,6 +56,7 @@ urlpatterns = [
     path("api/producers/<int:producer_id>/", producer_api_views.api_producer_resource, name="api_producer_resource"),
     path("recommendations/", views_ai.customer_recommendations, name="customer_recommendations"),
     path("api/recommendations/", views_ai.recommendations_api, name="recommendations_api"),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 ]
 
 if settings.DEBUG:

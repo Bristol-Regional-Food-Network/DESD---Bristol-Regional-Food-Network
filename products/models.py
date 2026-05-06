@@ -92,6 +92,11 @@ class Product(models.Model):
     stock = models.PositiveIntegerField(default=0)
     is_organic = models.BooleanField(default=False)
 
+    low_stock_threshold = models.PositiveIntegerField(
+        default=10,
+        help_text="Send alert when stock falls below this number"
+    )
+
     unit_value = models.DecimalField(
         max_digits=8,
         decimal_places=2,
@@ -159,7 +164,6 @@ class Product(models.Model):
 
     # Timestamp for when AI assessment was last performed
     ai_last_checked_at = models.DateTimeField(null=True, blank=True)
-
 
     def __str__(self):
         return self.name
@@ -335,7 +339,7 @@ class Product(models.Model):
     @property
     def review_count(self):
         return self.reviews.filter(is_approved=True).count()
-    
+
     def get_ai_grade_badge_class(self):
         if self.ai_grade == "A":
             return "bg-success"
@@ -391,3 +395,23 @@ class Review(models.Model):
 
     def __str__(self):
         return f"{self.product.name} - {self.customer.username} ({self.rating}/5)"
+
+
+class StockAlert(models.Model):
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="stock_alerts"
+    )
+    current_stock = models.PositiveIntegerField()
+    threshold = models.PositiveIntegerField()
+    is_resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        status = "Resolved" if self.is_resolved else "Active"
+        return f"Low Stock Alert: {self.product.name} - {self.current_stock} remaining [{status}]"
