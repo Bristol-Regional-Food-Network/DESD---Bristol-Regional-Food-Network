@@ -60,10 +60,17 @@ def load_customers():
                 last_name=row['last_name'],
             )
 
-            UserProfile.objects.get_or_create(
+            # Signal auto-creates UserProfile with role='customer'.
+            # Update it with address and postcode from CSV.
+            profile, _ = UserProfile.objects.get_or_create(
                 user=user,
                 defaults={'role': 'customer'},
             )
+            profile.role = 'customer'
+            profile.admin_approved = True
+            profile.address = (row.get('address', '') + ', ' + row.get('city', '')).strip(', ')
+            profile.postcode = row.get('postcode', '').strip()
+            profile.save()
 
             created += 1
 
@@ -93,19 +100,32 @@ def load_producers():
                 last_name=row['last_name'],
             )
 
-            UserProfile.objects.get_or_create(
+            # Signal auto-creates UserProfile with role='customer'.
+            # We must explicitly set role='producer' and save so that
+            # the manage_producer_profile signal fires and registers the producer.
+            profile, _ = UserProfile.objects.get_or_create(
                 user=user,
                 defaults={'role': 'producer'},
             )
+            profile.role = 'producer'
+            profile.admin_approved = True
+            profile.address = row.get('location', '').strip()
+            profile.postcode = row.get('postcode', '').strip()
+            profile.farm_name = row.get('farm_name', '').strip()
+            profile.save()
 
-            Producer.objects.create(
+            # The manage_producer_profile signal may have created a bare Producer.
+            # Use update_or_create to fill in the real data from CSV.
+            Producer.objects.update_or_create(
                 user=user,
-                display_name=row['display_name'],
-                bio=row['bio'],
-                location=row['location'],
-                postcode=row['postcode'],
-                phone=row['phone'],
-                website=row['website'],
+                defaults={
+                    'display_name': row['display_name'],
+                    'bio': row['bio'],
+                    'location': row['location'],
+                    'postcode': row['postcode'],
+                    'phone': row['phone'],
+                    'website': row['website'],
+                }
             )
             created += 1
 
@@ -138,16 +158,23 @@ def load_products():
         'surplus': Product.SECTION_SURPLUS,
     }
 
-    with open(path, encoding='utf-8') as f:
-        rows = csv.DictReader(f)
+    seen = set()
 
-        for row in rows:
+    with open(path, encoding='utf-8') as f:
+        for row in csv.DictReader(f):
             producer = Producer.objects.filter(display_name=row['producer_name']).first()
             if not producer:
                 skipped += 1
                 continue
 
             name = row['product_name'].strip()
+            key = (name, producer.id)
+
+            # Skip duplicates within this run and already-existing products
+            if key in seen:
+                skipped += 1
+                continue
+            seen.add(key)
 
             if Product.objects.filter(name=name, producer=producer).exists():
                 skipped += 1
@@ -161,21 +188,26 @@ def load_products():
             if unit_raw not in valid_units:
                 unit_raw = Product.UNIT_EACH
 
+            is_surplus = section_raw == 'surplus'
+            is_discounted = section_raw == 'discounted'
+
             Product.objects.create(
                 producer=producer,
                 name=name,
                 description=f"{name} from {producer.display_name}",
+                allergen_info="No common allergens listed",
                 price=row.get('price_per_unit') or 0,
                 stock=25,
+                low_stock_threshold=10,
                 is_organic=str(row.get('is_organic', '')).strip().lower() == 'true',
                 unit=unit_raw,
                 unit_value=1,
                 category=category_map.get(category_raw, Product.CATEGORY_VEGETABLES),
                 section=section_map.get(section_raw, Product.SECTION_ALL),
                 availability_mode=Product.AVAILABILITY_YEAR_ROUND,
-                discount_percent=10 if section_raw == 'discounted' else 0,
-                is_surplus=(section_raw == 'surplus'),
-                surplus_discount_percent=20 if section_raw == 'surplus' else 0,
+                discount_percent=10 if is_discounted else 0,
+                is_surplus=is_surplus,
+                surplus_discount_percent=20 if is_surplus else 0,
             )
             created += 1
 
@@ -196,6 +228,7 @@ def load_orders():
 
     user_map = {u.username: u for u in User.objects.all()}
     producer_map = {p.display_name: p for p in Producer.objects.all()}
+    product_map = {(p.name, p.producer_id): p for p in Product.objects.all()}
 
     rows.sort(key=lambda r: int(r['order_id']))
 
@@ -216,23 +249,27 @@ def load_orders():
         order = Order.objects.create(
             id=int(order_id),
             user=user,
-            cardholder_name=f"{user.first_name} {user.last_name}",
+            cardholder_name=f"{user.first_name} {user.last_name}".strip() or user.username,
             card_last4='1234',
             billing_address='123 Test Street',
-            city=first['city'],
-            postcode=first['postcode'],
+            city=first.get('city', 'Bristol'),
+            postcode=first.get('postcode', 'BS1 1AA'),
             delivery_date=first['delivery_date'],
             total_amount=sum(float(i['line_total']) for i in items),
+            commission_amount=round(sum(float(i['line_total']) for i in items) * 0.05, 2),
+            producer_amount=round(sum(float(i['line_total']) for i in items) * 0.95, 2),
             status=first['order_status'],
         )
         created_orders += 1
 
         for item in items:
             producer = producer_map.get(item['producer_name'])
+            product = product_map.get((item['product_name'].strip(), producer.id if producer else None))
 
             OrderItem.objects.create(
                 order=order,
                 producer=producer,
+                product=product,
                 product_name=item['product_name'],
                 producer_name=item['producer_name'],
                 unit_display=item['unit'],
@@ -255,14 +292,14 @@ def fix_existing_profiles():
     print("\n🔧 Fixing existing users without profiles...")
     fixed = 0
 
-    # Fix producers
-    for producer in Producer.objects.all():
+    for producer in Producer.objects.select_related('user').all():
         profile, created = UserProfile.objects.get_or_create(
             user=producer.user,
             defaults={'role': 'producer'},
         )
-        if not created and profile.role != 'producer':
+        if profile.role != 'producer':
             profile.role = 'producer'
+            profile.admin_approved = True
             profile.save()
             fixed += 1
         elif created:
@@ -275,6 +312,34 @@ def fix_existing_profiles():
 #  MAIN
 # ══════════════════════════════════════════════════════════════
 
+def reset_sequences():
+    print("\n🔧 Resetting PostgreSQL sequences...")
+    from django.db import connection
+    tables = [
+        'basket_order',
+        'basket_orderitem',
+        'basket_producerorder',
+        'basket_recurringorder',
+        'basket_recurringorderitem',
+        'products_product',
+        'producers_producer',
+        'users_userprofile',
+    ]
+    with connection.cursor() as cursor:
+        for table in tables:
+            try:
+                cursor.execute(f"""
+                    SELECT setval(
+                        pg_get_serial_sequence('{table}', 'id'),
+                        COALESCE((SELECT MAX(id) FROM {table}), 1)
+                    );
+                """)
+                print(f"   ✅ {table} sequence reset")
+            except Exception as e:
+                print(f"   ⚠️  {table} skipped: {e}")
+    print("   ✅ All sequences reset")
+
+
 if __name__ == '__main__':
     print("=" * 55)
     print("  Bristol Regional Food Network — Database Loader")
@@ -285,6 +350,7 @@ if __name__ == '__main__':
     load_products()
     load_orders()
     fix_existing_profiles()
+    reset_sequences()
 
     print("\n" + "=" * 55)
     print("  ✅ All done! Your database is ready.")

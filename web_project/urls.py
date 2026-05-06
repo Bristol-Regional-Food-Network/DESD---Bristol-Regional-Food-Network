@@ -3,8 +3,6 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
-from django.conf import settings
-from django.conf.urls.static import static
 
 from users.views import register, customer_register, producer_register, community_group_register, restaurant_register, employee_register, pending_employees, approve_employee
 
@@ -56,7 +54,6 @@ urlpatterns = [
     path("api/producers/<int:producer_id>/", producer_api_views.api_producer_resource, name="api_producer_resource"),
     path("recommendations/", views_ai.customer_recommendations, name="customer_recommendations"),
     path("api/recommendations/", views_ai.recommendations_api, name="recommendations_api"),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 ]
 
 if settings.DEBUG:
