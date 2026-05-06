@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
 
 from basket.models import Order, OrderItem
-from products.models import Product
+from products.models import Product, StockAlert
 from users.decorators import role_required
 
 from .models import Producer
@@ -92,7 +92,7 @@ def _build_grouped_orders(order_items, sort_by: str = "newest"):
             }
 
         group = grouped[order_id]
-        line_total = item.line_total()
+        line_total = item.line_total
         group["items"].append(item)
         group["producer_total"] += line_total
         group["item_count"] += item.quantity
@@ -156,9 +156,9 @@ def _producer_reports_context(producer: Producer):
     week_ago = timezone.now() - timezone.timedelta(days=7)
     day_ago = timezone.now() - timezone.timedelta(days=1)
 
-    total_earnings = sum((item.line_total() for item in fulfilled_items), Decimal("0.00"))
+    total_earnings = sum((item.line_total for item in fulfilled_items), Decimal("0.00"))
     earnings_this_week = sum(
-        (item.line_total() for item in fulfilled_items.filter(order__created_at__gte=week_ago)),
+        (item.line_total for item in fulfilled_items.filter(order__created_at__gte=week_ago)),
         Decimal("0.00"),
     )
     items_sold = fulfilled_items.aggregate(total=Sum("quantity"))["total"] or 0
@@ -216,6 +216,7 @@ def dashboard(request):
                 "surplus_products": [],
                 "all_products": [],
                 "upcoming_season_products": [],
+                "active_stock_alerts": [],
             },
         )
 
@@ -225,6 +226,11 @@ def dashboard(request):
     surplus_products = my_products.filter(section=Product.SECTION_SURPLUS)
     all_products = my_products.filter(section=Product.SECTION_ALL)
     upcoming_season_products = [p for p in my_products if p.season_starts_next_month]
+
+    active_stock_alerts = StockAlert.objects.filter(
+        product__producer=producer,
+        is_resolved=False,
+    ).select_related("product")
 
     return render(
         request,
@@ -237,6 +243,7 @@ def dashboard(request):
             "surplus_products": surplus_products,
             "all_products": all_products,
             "upcoming_season_products": upcoming_season_products,
+            "active_stock_alerts": active_stock_alerts,
         },
     )
 
@@ -351,7 +358,7 @@ def producer_order_detail(request, order_id):
 
     order = producer_items[0].order
     _sync_order_status(order)
-    producer_total = sum((item.line_total() for item in producer_items), Decimal("0.00"))
+    producer_total = sum((item.line_total for item in producer_items), Decimal("0.00"))
     pending_items = [item for item in producer_items if item.fulfilment_status == "pending"]
     fulfilled_items = [item for item in producer_items if item.fulfilment_status == "fulfilled"]
 

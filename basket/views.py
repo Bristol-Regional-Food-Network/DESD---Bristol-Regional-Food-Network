@@ -13,6 +13,7 @@ from django.utils.text import slugify
 from django.http import JsonResponse
 
 from products.models import Product
+from products.stock_alerts import check_and_create_stock_alert
 from .forms import PaymentForm
 from .models import Order, OrderItem, ProducerOrder
 
@@ -489,6 +490,8 @@ def checkout(request):
                             product.surplus_note = ""
                             product.surplus_expires_at = None
                         product.save()
+                        # Check and create low stock alert if needed
+                        check_and_create_stock_alert(product)
 
                 confirmation_groups.append({
                     "producer_name": producer_order.producer_name,

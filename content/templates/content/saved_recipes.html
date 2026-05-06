@@ -1,0 +1,38 @@
+{% extends "base/base.html" %}
+
+{% block title %}Saved Recipes{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-4">Saved Recipes</h1>
+
+  {% if saves %}
+    <div class="row g-3">
+      {% for save in saves %}
+        <div class="col-md-6 col-lg-4">
+          <div class="card shadow-sm rounded-4 h-100">
+            {% if save.recipe.image %}
+              <img src="{{ save.recipe.image.url }}" class="card-img-top rounded-top-4" style="height:160px;object-fit:cover;" alt="{{ save.recipe.title }}">
+            {% endif %}
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title">{{ save.recipe.title }}</h5>
+              <p class="small text-muted mb-1">By {{ save.recipe.producer.display_name }}</p>
+              <span class="badge bg-success mb-2 align-self-start">{{ save.recipe.get_seasonal_tag_display }}</span>
+              <p class="text-muted small mb-2">{{ save.recipe.description|truncatechars:80 }}</p>
+              <div class="mt-auto d-flex gap-2">
+                <a href="{% url 'content:recipe_detail' save.recipe.id %}" class="btn btn-sm btn-dark">View Recipe</a>
+                <form method="post" action="{% url 'content:unsave_recipe' save.recipe.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-muted">You haven't saved any recipes yet. Browse producer profiles to find recipes.</p>
+  {% endif %}
+</div>
+{% endblock %}

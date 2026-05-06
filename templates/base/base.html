@@ -87,6 +87,8 @@
 </li>
 {% endif %}
 
+<a class="btn btn-outline-success" href="{% url 'content:content_dashboard' %}">Content</a>
+
 {% if user.is_authenticated and user.userprofile.role == "customer" %}
 <li class="nav-item">
     <a class="nav-link" href="{% url 'customer_recommendations' %}">

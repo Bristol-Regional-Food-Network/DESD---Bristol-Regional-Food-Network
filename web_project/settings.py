@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "basket",
     "managers",
     "ai_engineer",
+    "content",
 ]
 
 MIDDLEWARE = [

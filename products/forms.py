@@ -14,10 +14,11 @@ class ProductForm(forms.ModelForm):
         model = Product
         fields = [
             "name",
-            "image", # Allows image upload and clearing existing image
+            "image",
             "description",
             "price",
             "stock",
+            "low_stock_threshold",
             "unit_value",
             "unit",
             "category",
@@ -34,10 +35,11 @@ class ProductForm(forms.ModelForm):
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
-            "image": forms.ClearableFileInput(attrs={"class": "form-control"}), # Allows image upload and clearing existing image
+            "image": forms.ClearableFileInput(attrs={"class": "form-control"}),
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "price": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
             "stock": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
+            "low_stock_threshold": forms.NumberInput(attrs={"class": "form-control", "min": "0"}),
             "unit_value": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
             "unit": forms.Select(attrs={"class": "form-select"}),
             "category": forms.Select(attrs={"class": "form-select"}),

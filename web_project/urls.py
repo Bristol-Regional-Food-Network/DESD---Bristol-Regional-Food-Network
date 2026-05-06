@@ -43,6 +43,7 @@ urlpatterns = [
     path("manager/", include("managers.urls")),
     path("basket/", include("basket.urls")),
     path("ai-engineer/", include("ai_engineer.urls")),
+    path("content/", include("content.urls")),
 
     # API
     path("api/products/", product_api_views.api_product_collection, name="api_products_collection"),
