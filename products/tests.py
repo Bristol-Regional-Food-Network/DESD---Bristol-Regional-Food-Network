@@ -203,3 +203,74 @@ class ReviewModelTests(TestCase):
         )
         self.assertEqual(self.product.review_count, 1)
         self.assertEqual(self.product.average_rating, 5)
+
+
+class ProductAllergenTests(TestCase):
+    def setUp(self):
+        self.producer = _make_producer("allergen-farm")
+
+    def test_allergen_display_defaults_when_blank(self):
+        product = Product.objects.create(
+            producer=self.producer,
+            name="Apples",
+            price=Decimal("2.00"),
+            stock=10,
+            allergen_info="",
+        )
+        self.assertEqual(product.allergen_display, "No common allergens listed")
+        self.assertFalse(product.has_allergen_warning)
+
+    def test_allergen_warning_detects_entered_allergens(self):
+        product = Product.objects.create(
+            producer=self.producer,
+            name="Walnut Bread",
+            price=Decimal("3.50"),
+            stock=8,
+            allergen_info="Contains: Wheat (Gluten), Nuts (Walnuts)",
+        )
+        self.assertIn("Nuts", product.allergen_display)
+        self.assertTrue(product.has_allergen_warning)
+
+    def test_product_search_matches_allergen_text(self):
+        Product.objects.create(
+            producer=self.producer,
+            name="Walnut Bread",
+            price=Decimal("3.50"),
+            stock=8,
+            allergen_info="Contains: Wheat (Gluten), Nuts (Walnuts)",
+        )
+        Product.objects.create(
+            producer=self.producer,
+            name="Fresh Apples",
+            price=Decimal("1.50"),
+            stock=20,
+            allergen_info="No common allergens listed",
+        )
+
+        response = self.client.get("/products/", {"q": "nuts"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Walnut Bread")
+        self.assertNotContains(response, "Fresh Apples")
+
+    def test_allergen_filter_can_show_no_common_allergens(self):
+        Product.objects.create(
+            producer=self.producer,
+            name="Cheddar Cheese",
+            price=Decimal("4.00"),
+            stock=10,
+            allergen_info="Contains: Milk",
+        )
+        Product.objects.create(
+            producer=self.producer,
+            name="Fresh Apples",
+            price=Decimal("1.50"),
+            stock=20,
+            allergen_info="No common allergens listed",
+        )
+
+        response = self.client.get("/products/", {"allergen": "no_common_allergens"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Fresh Apples")
+        self.assertNotContains(response, "Cheddar Cheese")

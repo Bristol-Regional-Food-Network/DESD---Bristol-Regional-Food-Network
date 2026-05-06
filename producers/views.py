@@ -4,12 +4,12 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q, Sum
-from django.http import HttpRequest, JsonResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST, require_http_methods
 
-from basket.models import Order, OrderItem
+from basket.models import Order, OrderItem, OrderStatusHistory
 from products.models import Product
 from users.decorators import role_required
 
@@ -19,6 +19,71 @@ from .models import Producer
 ORDER_FILTERS = {"all", "paid", "partially_fulfilled", "fulfilled", "cancelled"}
 ITEM_FILTERS = {"all", "pending", "fulfilled", "cancelled"}
 SORT_OPTIONS = {"newest", "oldest", "total_desc", "total_asc"}
+
+COMMISSION_RATE = Decimal("0.05")
+PRODUCER_RATE = Decimal("0.95")
+MONEY_PLACES = Decimal("0.01")
+
+def _money(value):
+    return Decimal(value or 0).quantize(MONEY_PLACES)
+
+def _settlement_week_start(dt):
+    date_value = timezone.localtime(dt).date() if hasattr(dt, "hour") else dt
+    return date_value - timezone.timedelta(days=date_value.weekday())
+
+def _producer_settlement_data(producer: Producer):
+    fulfilled_items = (
+        producer.order_items
+        .filter(fulfilment_status="fulfilled")
+        .select_related("order", "order__user", "product")
+        .order_by("-order__created_at", "product_name")
+    )
+    weekly = OrderedDict()
+    rows = []
+    for item in fulfilled_items:
+        week_start = _settlement_week_start(item.order.created_at)
+        week_end = week_start + timezone.timedelta(days=6)
+        gross = _money(item.line_total)
+        commission = _money(gross * COMMISSION_RATE)
+        payout = _money(gross * PRODUCER_RATE)
+        if week_start not in weekly:
+            weekly[week_start] = {
+                "week_start": week_start,
+                "week_end": week_end,
+                "gross_sales": Decimal("0.00"),
+                "commission": Decimal("0.00"),
+                "payout": Decimal("0.00"),
+                "order_count": set(),
+                "item_count": 0,
+                "status": "Processed" if week_end < timezone.localdate() else "Pending",
+                "items": [],
+            }
+        group = weekly[week_start]
+        group["gross_sales"] += gross
+        group["commission"] += commission
+        group["payout"] += payout
+        group["order_count"].add(item.order_id)
+        group["item_count"] += item.quantity
+        group["items"].append(item)
+        rows.append({
+            "week_start": week_start,
+            "week_end": week_end,
+            "status": group["status"],
+            "item": item,
+            "gross": gross,
+            "commission": commission,
+            "payout": payout,
+        })
+    summaries = []
+    for group in weekly.values():
+        summaries.append({
+            **group,
+            "order_count": len(group["order_count"]),
+            "gross_sales": _money(group["gross_sales"]),
+            "commission": _money(group["commission"]),
+            "payout": _money(group["payout"]),
+        })
+    return summaries, rows
 
 
 def _producer_to_dict(producer: Producer):
@@ -92,7 +157,7 @@ def _build_grouped_orders(order_items, sort_by: str = "newest"):
             }
 
         group = grouped[order_id]
-        line_total = item.line_total()
+        line_total = item.line_total
         group["items"].append(item)
         group["producer_total"] += line_total
         group["item_count"] += item.quantity
@@ -156,9 +221,9 @@ def _producer_reports_context(producer: Producer):
     week_ago = timezone.now() - timezone.timedelta(days=7)
     day_ago = timezone.now() - timezone.timedelta(days=1)
 
-    total_earnings = sum((item.line_total() for item in fulfilled_items), Decimal("0.00"))
+    total_earnings = sum((item.line_total for item in fulfilled_items), Decimal("0.00"))
     earnings_this_week = sum(
-        (item.line_total() for item in fulfilled_items.filter(order__created_at__gte=week_ago)),
+        (item.line_total for item in fulfilled_items.filter(order__created_at__gte=week_ago)),
         Decimal("0.00"),
     )
     items_sold = fulfilled_items.aggregate(total=Sum("quantity"))["total"] or 0
@@ -175,6 +240,7 @@ def _producer_reports_context(producer: Producer):
 
     recent_new_orders = my_order_items.filter(order__created_at__gte=day_ago).values("order_id").distinct().count()
     pending_order_count = my_order_items.filter(fulfilment_status="pending").values("order_id").distinct().count()
+    settlement_summaries, settlement_rows = _producer_settlement_data(producer)
 
     return {
         "producer": producer,
@@ -191,6 +257,8 @@ def _producer_reports_context(producer: Producer):
         "average_order_value": average_order_value,
         "recent_new_orders": recent_new_orders,
         "pending_order_count": pending_order_count,
+        "settlement_summaries": settlement_summaries,
+        "settlement_rows": settlement_rows,
         "status_badge_class": _status_badge_class,
     }
 
@@ -266,6 +334,8 @@ def reports(request):
                 "average_order_value": Decimal("0.00"),
                 "recent_new_orders": 0,
                 "pending_order_count": 0,
+                "settlement_summaries": [],
+                "settlement_rows": [],
             },
         )
 
@@ -351,9 +421,10 @@ def producer_order_detail(request, order_id):
 
     order = producer_items[0].order
     _sync_order_status(order)
-    producer_total = sum((item.line_total() for item in producer_items), Decimal("0.00"))
+    producer_total = sum((item.line_total for item in producer_items), Decimal("0.00"))
     pending_items = [item for item in producer_items if item.fulfilment_status == "pending"]
     fulfilled_items = [item for item in producer_items if item.fulfilment_status == "fulfilled"]
+    status_history = OrderStatusHistory.objects.filter(order=order, order_item__producer=producer).select_related("order_item", "changed_by")
 
     return render(
         request,
@@ -367,6 +438,7 @@ def producer_order_detail(request, order_id):
             "fulfilled_line_count": len(fulfilled_items),
             "all_items_finalised": all(item.fulfilment_status in {"fulfilled", "cancelled"} for item in producer_items),
             "status_badge_class": _status_badge_class,
+            "status_history": status_history,
         },
     )
 
@@ -387,6 +459,7 @@ def update_order_item_status(request, item_id):
     )
 
     new_status = request.POST.get("fulfilment_status", "").strip()
+    producer_note = request.POST.get("status_note", "").strip()
     allowed_statuses = {"pending", "fulfilled"}
 
     if new_status not in allowed_statuses:
@@ -403,8 +476,18 @@ def update_order_item_status(request, item_id):
         messages.info(request, f"{product_name} is already marked as {new_status}.")
         return redirect("producers:producer_order_detail", order_id=order_item.order_id)
 
+    old_status = order_item.fulfilment_status
     order_item.fulfilment_status = new_status
     order_item.save(update_fields=["fulfilment_status"])
+    OrderStatusHistory.objects.create(
+        order=order_item.order,
+        order_item=order_item,
+        producer_order=order_item.producer_order,
+        old_status=old_status,
+        new_status=new_status,
+        note=producer_note,
+        changed_by=request.user,
+    )
     _sync_order_status(order_item.order)
 
     messages.success(request, f"Updated {product_name} to {new_status.replace('_', ' ')}.")
@@ -431,9 +514,22 @@ def bulk_fulfil_order(request, order_id):
         messages.error(request, "Cancelled orders cannot be fulfilled.")
         return redirect("producers:producer_order_detail", order_id=order_id)
 
-    updated = producer_items.exclude(
-        fulfilment_status__in=["fulfilled", "cancelled"]
-    ).update(fulfilment_status="fulfilled")
+    bulk_note = request.POST.get("status_note", "Bulk marked as fulfilled").strip()
+    updated = 0
+    for item in producer_items.exclude(fulfilment_status__in=["fulfilled", "cancelled"]):
+        old_status = item.fulfilment_status
+        item.fulfilment_status = "fulfilled"
+        item.save(update_fields=["fulfilment_status"])
+        OrderStatusHistory.objects.create(
+            order=item.order,
+            order_item=item,
+            producer_order=item.producer_order,
+            old_status=old_status,
+            new_status="fulfilled",
+            note=bulk_note,
+            changed_by=request.user,
+        )
+        updated += 1
 
     _sync_order_status(order)
 
@@ -443,6 +539,28 @@ def bulk_fulfil_order(request, order_id):
         messages.info(request, "No pending lines were available to fulfil.")
 
     return redirect("producers:producer_order_detail", order_id=order_id)
+
+
+
+@login_required
+@role_required("producer")
+def settlement_csv(request):
+    producer = getattr(request.user, "producer", None)
+    if producer is None:
+        messages.error(request, "Producer profile not found.")
+        return redirect("producers:producer_reports")
+
+    _, rows = _producer_settlement_data(producer)
+    response = HttpResponse(content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="producer_settlements.csv"'
+    response.write("Week Start,Week End,Settlement Status,Order ID,Customer,Product,Quantity,Gross Sales,Network Commission 5%,Producer Payout 95%\n")
+    for row in rows:
+        item = row["item"]
+        customer = item.order.user.username if item.order.user else item.order.cardholder_name
+        response.write(
+            f"{row['week_start']},{row['week_end']},{row['status']},{item.order_id},{customer},{item.product_name},{item.quantity},{row['gross']},{row['commission']},{row['payout']}\n"
+        )
+    return response
 
 
 def list_producers(request):

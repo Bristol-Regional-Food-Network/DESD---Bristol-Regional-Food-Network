@@ -1,8 +1,10 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 
-from users.views import register, customer_register, producer_register, employee_register, pending_employees, approve_employee
+from users.views import register, customer_register, producer_register, community_group_register, restaurant_register, employee_register, pending_employees, approve_employee
 
 from core.auth_views import post_login_redirect
 
@@ -20,6 +22,8 @@ urlpatterns = [
     path("register/", register, name="register"),
     path("register/customer/", customer_register, name="customer_register"),
     path("register/producer/", producer_register, name="producer_register"),
+    path("register/community-group/", community_group_register, name="community_group_register"),
+    path("register/restaurant/", restaurant_register, name="restaurant_register"),
     path("register/employee/", employee_register, name="employee_register"),
 
     path("employees/pending/", pending_employees, name="pending_employees"),
@@ -52,3 +56,6 @@ urlpatterns = [
     path("recommendations/", views_ai.customer_recommendations, name="customer_recommendations"),
     path("api/recommendations/", views_ai.recommendations_api, name="recommendations_api"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

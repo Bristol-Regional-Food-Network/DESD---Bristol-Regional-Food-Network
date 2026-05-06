@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Order, OrderItem, ProducerOrder, RecurringOrder, RecurringOrderItem
+from .models import Order, OrderItem, ProducerOrder, OrderStatusHistory, RecurringOrder, RecurringOrderItem
 
 
 class OrderItemInline(admin.TabularInline):
@@ -151,6 +151,16 @@ class OrderItemAdmin(admin.ModelAdmin):
 class RecurringOrderItemInline(admin.TabularInline):
     model = RecurringOrderItem
     extra = 0
+
+
+
+
+@admin.register(OrderStatusHistory)
+class OrderStatusHistoryAdmin(admin.ModelAdmin):
+    list_display = ("order", "order_item", "old_status", "new_status", "changed_by", "created_at")
+    list_filter = ("old_status", "new_status", "created_at")
+    search_fields = ("order__id", "order_item__product_name", "note", "changed_by__username")
+    readonly_fields = ("created_at",)
 
 
 @admin.register(RecurringOrder)

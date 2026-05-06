@@ -101,6 +101,79 @@
       </div>
     </div>
 
+
+    <div class="card mb-4 border-success-subtle">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h4 class="mb-1">Weekly Payment Settlements</h4>
+            <p class="text-muted mb-0">Fulfilled order items only. The network commission is 5%, leaving a 95% producer payout.</p>
+          </div>
+          <a href="{% url 'producers:producer_settlement_csv' %}" class="btn btn-sm btn-outline-success">
+            Download CSV
+          </a>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <div class="border rounded p-3 bg-light h-100">
+              <small class="text-muted d-block">Gross fulfilled sales</small>
+              <strong>£{{ settlement_totals.gross_sales|floatformat:2 }}</strong>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded p-3 bg-light h-100">
+              <small class="text-muted d-block">Network commission deducted</small>
+              <strong>£{{ settlement_totals.commission_amount|floatformat:2 }}</strong>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded p-3 bg-light h-100">
+              <small class="text-muted d-block">Producer payout</small>
+              <strong>£{{ settlement_totals.producer_payout|floatformat:2 }}</strong>
+            </div>
+          </div>
+        </div>
+
+        {% if weekly_settlements %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Week</th>
+                  <th>Status</th>
+                  <th>Orders</th>
+                  <th>Items</th>
+                  <th>Gross Sales</th>
+                  <th>5% Commission</th>
+                  <th>95% Payout</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for settlement in weekly_settlements %}
+                  <tr>
+                    <td>{{ settlement.week_start|date:"d M Y" }} - {{ settlement.week_end|date:"d M Y" }}</td>
+                    <td>
+                      <span class="badge {% if settlement.status == 'Processed' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                        {{ settlement.status }}
+                      </span>
+                    </td>
+                    <td>{{ settlement.order_count }}</td>
+                    <td>{{ settlement.item_count }}</td>
+                    <td>£{{ settlement.gross_sales|floatformat:2 }}</td>
+                    <td>£{{ settlement.commission_amount|floatformat:2 }}</td>
+                    <td>£{{ settlement.producer_payout|floatformat:2 }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">No fulfilled order items are available for settlement reporting yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
     <div class="row g-4">
       <div class="col-lg-7">
         <div class="card h-100">

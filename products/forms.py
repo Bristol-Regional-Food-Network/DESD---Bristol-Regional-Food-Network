@@ -16,6 +16,7 @@ class ProductForm(forms.ModelForm):
             "name",
             "image", # Allows image upload and clearing existing image
             "description",
+            "allergen_info",
             "price",
             "stock",
             "unit_value",
@@ -34,6 +35,11 @@ class ProductForm(forms.ModelForm):
         ]
         widgets = {
             "description": forms.Textarea(attrs={"rows": 4, "class": "form-control"}),
+            "allergen_info": forms.Textarea(attrs={
+                "rows": 3,
+                "class": "form-control",
+                "placeholder": "e.g. Contains: Milk, Eggs, Nuts. Or: No common allergens listed."
+            }),
             "image": forms.ClearableFileInput(attrs={"class": "form-control"}), # Allows image upload and clearing existing image
             "name": forms.TextInput(attrs={"class": "form-control"}),
             "price": forms.NumberInput(attrs={"class": "form-control", "step": "0.01", "min": "0.01"}),
@@ -52,6 +58,10 @@ class ProductForm(forms.ModelForm):
             "surplus_discount_percent": forms.NumberInput(attrs={"class": "form-control", "min": "10", "max": "50"}),
             "surplus_note": forms.Textarea(attrs={"rows": 3, "class": "form-control"}),
         }
+
+    def clean_allergen_info(self):
+        allergen_info = (self.cleaned_data.get("allergen_info") or "").strip()
+        return allergen_info or "No common allergens listed"
 
     def clean_discount_percent(self):
         discount = self.cleaned_data.get("discount_percent", 0)

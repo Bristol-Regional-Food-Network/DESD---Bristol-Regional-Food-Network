@@ -11,12 +11,14 @@
                 <span class="badge status-badge status-badge--{{ order.status }}">{{ order.get_status_display }}</span>
             </div>
             <p class="text-muted mb-0">Customer: {% if order.user %}{{ order.user.username }}{% else %}Guest{% endif %} · Placed {{ order.created_at|date:"d M Y, H:i" }}</p>
+            <p class="text-muted mb-0"><strong>Special delivery instructions:</strong> {% if order.special_delivery_instructions %}{{ order.special_delivery_instructions }}{% else %}None provided{% endif %}</p>
         </div>
         <div class="d-flex gap-2">
             <a href="{% url 'producers:producer_orders' %}" class="btn btn-outline-dark">Back to Orders</a>
             {% if order.status != 'cancelled' and not all_items_finalised %}
                 <form method="post" action="{% url 'producers:bulk_fulfil_order' order.id %}" onsubmit="return confirm('Mark all pending items in this order as fulfilled?');">
                     {% csrf_token %}
+                    <input type="hidden" name="status_note" value="Bulk marked as fulfilled by producer.">
                     <button type="submit" class="btn btn-success">Mark All Fulfilled</button>
                 </form>
             {% else %}
@@ -64,13 +66,16 @@
                                     {% elif item.fulfilment_status == 'fulfilled' %}
                                         <button type="button" class="btn btn-sm btn-outline-success" disabled>Already fulfilled</button>
                                     {% else %}
-                                        <form method="post" action="{% url 'producers:update_order_item_status' item.id %}" class="d-flex gap-2" onsubmit="return confirm('Update {{ item.product.name }} to the selected fulfilment status?');">
+                                        <form method="post" action="{% url 'producers:update_order_item_status' item.id %}" class="d-flex flex-column gap-2" onsubmit="return confirm('Update {{ item.product.name }} to the selected fulfilment status?');">
                                             {% csrf_token %}
-                                            <select name="fulfilment_status" class="form-select form-select-sm">
-                                                <option value="pending" {% if item.fulfilment_status == "pending" %}selected{% endif %}>Pending</option>
-                                                <option value="fulfilled" {% if item.fulfilment_status == "fulfilled" %}selected{% endif %}>Fulfilled</option>
-                                            </select>
-                                            <button type="submit" class="btn btn-sm btn-dark">Save</button>
+                                            <div class="d-flex gap-2">
+                                                <select name="fulfilment_status" class="form-select form-select-sm">
+                                                    <option value="pending" {% if item.fulfilment_status == "pending" %}selected{% endif %}>Pending</option>
+                                                    <option value="fulfilled" {% if item.fulfilment_status == "fulfilled" %}selected{% endif %}>Fulfilled</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-dark">Save</button>
+                                            </div>
+                                            <input type="text" name="status_note" class="form-control form-control-sm" placeholder="Optional producer note">
                                         </form>
                                     {% endif %}
                                 </td>
@@ -81,5 +86,40 @@
             </div>
         </div>
     </div>
+
+    <div class="card shadow-sm mt-4">
+        <div class="card-body">
+            <h3 class="mb-3">Status History</h3>
+            {% if status_history %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Product</th>
+                                <th>Change</th>
+                                <th>Note</th>
+                                <th>Changed By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for update in status_history %}
+                                <tr>
+                                    <td>{{ update.created_at|date:"d M Y, H:i" }}</td>
+                                    <td>{% if update.order_item %}{{ update.order_item.product_name }}{% else %}Order update{% endif %}</td>
+                                    <td>{{ update.old_status|title }} → {{ update.new_status|title }}</td>
+                                    <td>{% if update.note %}{{ update.note }}{% else %}<span class="text-muted">No note</span>{% endif %}</td>
+                                    <td>{% if update.changed_by %}{{ update.changed_by.username }}{% else %}<span class="text-muted">System</span>{% endif %}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted mb-0">No status updates have been recorded yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
 </div>
 {% endblock %}

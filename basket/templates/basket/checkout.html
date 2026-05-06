@@ -185,6 +185,15 @@
               </div>
             </div>
 
+            <div class="mb-3">
+              <label for="{{ form.special_delivery_instructions.id_for_label }}" class="form-label">Special delivery instructions</label>
+              {{ form.special_delivery_instructions }}
+              {% if form.special_delivery_instructions.errors %}
+                <div class="text-danger small mt-1">{{ form.special_delivery_instructions.errors }}</div>
+              {% endif %}
+              <div class="form-text">Optional notes for producers, such as delivery entrance or contact instructions.</div>
+            </div>
+
             <hr class="my-4">
 
             <h3 class="h6 mb-3">Producer Delivery Dates</h3>

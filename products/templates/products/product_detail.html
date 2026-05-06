@@ -72,6 +72,11 @@
                 <span class="badge bg-secondary ms-1">Not Certified</span>
               {% endif %}
             </p>
+            <div class="alert {% if product.has_allergen_warning %}alert-warning{% else %}alert-success{% endif %} mb-3">
+              <strong>Allergen information:</strong>
+              {{ product.allergen_display }}
+            </div>
+
             <p class="mb-2">
               <strong>AI Quality Grade:</strong>
               {% if product.ai_grade %}
