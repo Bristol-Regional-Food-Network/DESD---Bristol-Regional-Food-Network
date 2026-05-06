@@ -1,0 +1,169 @@
+{% extends "base/base.html" %}
+
+{% block title %}{{ page_title|default:"Add Product" }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-7">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-4">
+                <h2 class="mb-4 text-center">{{ page_title|default:"Add Product" }}</h2>
+
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    {% if form.errors %}
+                        <div class="alert alert-danger">
+                            <strong>Please fix the following errors:</strong>
+                            {{ form.errors }}
+                        </div>
+                    {% endif %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Product Name</label>
+                        {{ form.name }}
+                    </div>
+
+                    <!-- Image upload field with instructions for AI quality inspection -->
+                    <div class="mb-3">
+                        <label class="form-label">Product Image</label>
+                        {{ form.image }}
+                        <div class="form-text">
+                            Upload an image for AI quality inspection.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        {{ form.description }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.allergen_info.label }}</label>
+                        {{ form.allergen_info }}
+                        <div class="form-text">
+                            List known allergens clearly, or state "No common allergens listed".
+                        </div>
+                        {% if form.allergen_info.errors %}
+                            <div class="text-danger small">{{ form.allergen_info.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Price (£)</label>
+                        {{ form.price }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Quantity</label>
+                        {{ form.stock }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.unit_value.id_for_label }}" class="form-label">Unit Value</label>
+                        {{ form.unit_value }}
+                        {% if form.unit_value.errors %}
+                            <div class="text-danger small">{{ form.unit_value.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">Example: 500 for 500g, 1 for 1kg, 6 for a pack of 6.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.unit.id_for_label }}" class="form-label">Unit</label>
+                        {{ form.unit }}
+                        {% if form.unit.errors %}
+                            <div class="text-danger small">{{ form.unit.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="text-danger small">{{ form.category.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Section</label>
+                        {{ form.section }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Discount Percent</label>
+                        {{ form.discount_percent }}
+                        <div class="form-text">Use 0 for non-discounted items.</div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3">Seasonal Availability</h5>
+
+                    <div class="mb-3">
+                        <label class="form-label">Availability Type</label>
+                        {{ form.availability_mode }}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Season Start Month</label>
+                            {{ form.season_start_month }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Season End Month</label>
+                            {{ form.season_end_month }}
+                        </div>
+                    </div>
+
+                    <div class="form-text mb-3">
+                        For example, Strawberries can be set from June to August.
+                        Year-round products do not need seasonal months.
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3">Surplus / Last-Minute Deal</h5>
+
+                    <div class="form-check mb-3">
+                        {{ form.is_surplus }}
+                        <label class="form-check-label ms-2">Mark as surplus deal</label>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Surplus Discount Percent</label>
+                        {{ form.surplus_discount_percent }}
+                        <div class="form-text">Enter a value between 10% and 50%.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Deal Duration (hours)</label>
+                        {{ form.surplus_duration_hours }}
+                        <div class="form-text">Example: 48 hours for a short last-minute deal.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Surplus Note</label>
+                        {{ form.surplus_note }}
+                        <div class="form-text">Example: Perfect condition, must sell quickly to avoid waste.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Best Before Date</label>
+                        {{ form.best_before_date }}
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100">
+                        {% if is_edit %}Update Product{% else %}Add Product{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

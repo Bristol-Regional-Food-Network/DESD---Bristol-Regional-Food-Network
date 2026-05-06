@@ -1,0 +1,792 @@
+{% extends "base/base.html" %}
+
+{% block title %}Marketplace{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-2">Marketplace</h1>
+    <p class="text-muted mb-4">Browse fresh products from local producers.</p>
+
+    {% if recommended_products and not query %}
+        <div class="mb-5">
+            <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#6f42c1;">
+                <strong>Recommended for You</strong>
+            </div>
+
+            <div class="row g-3">
+                {% for rec in recommended_products %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm h-100 rounded-4 border">
+                            {% if rec.product.image %}
+                                <img src="{{ rec.product.image.url }}" alt="{{ rec.product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="card-title mb-0">{{ rec.product.name }}</h5>
+                                    <span class="badge bg-dark">
+                                        {{ rec.final_score|floatformat:2 }}
+                                    </span>
+                                </div>
+
+                                <p class="text-muted small mb-2">
+                                    {{ rec.product.description|default:"No description available."|truncatechars:100 }}
+                                </p>
+
+                                <p class="small mb-1"><strong>Producer:</strong> {{ rec.product.producer.display_name }}</p>
+                                <p class="small mb-1"><strong>Category:</strong> {{ rec.product.get_category_display }}</p>
+                                <p class="small mb-2">
+                                    <strong>Allergens:</strong> {{ rec.product.allergen_display|truncatechars:60 }}
+                                </p>
+
+                                <div class="mb-2">
+                                    {% if rec.product.is_organic %}
+                                        <span class="badge bg-success">Certified Organic</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Not Certified</span>
+                                    {% endif %}
+                                </div>
+                                {% if rec.product.ai_grade %}
+                                    <div class="mb-2">
+                                        <span class="badge {{ rec.product.get_ai_grade_badge_class }}">
+                                            AI Grade: {{ rec.product.ai_grade }}
+                                        </span>
+                                    </div>
+                                {% endif %}
+
+                                <p class="small text-muted mb-2">
+                                    Based on your order history and similar purchase patterns.
+                                </p>
+
+                                <details class="small mb-3">
+                                    <summary style="cursor:pointer;">Why this recommendation?</summary>
+                                    <div class="mt-2 text-muted">
+                                        Ordered before: {{ rec.total_orders }} time(s)<br>
+                                        SVD score: {{ rec.svd_score|floatformat:3 }}<br>
+                                        RF score: {{ rec.rf_score|floatformat:3 }}<br>
+                                        Final score: {{ rec.final_score|floatformat:3 }}
+                                    </div>
+                                </details>
+
+                                <div class="mt-auto d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">Stock: {{ rec.product.stock }}</small>
+                                    <div class="d-flex gap-2">
+                                        <a href="{% url 'products:product_detail' rec.product.id %}" class="btn btn-sm btn-dark">
+                                            View
+                                        </a>
+                                        <a href="{% url 'save_product' rec.product.id %}" class="btn btn-sm btn-outline-secondary">
+                                            Save
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Search + Filters -->
+    <form method="get" class="mb-4">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input
+                    type="text"
+                    name="q"
+                    value="{{ query }}"
+                    class="form-control"
+                    placeholder="Search by product name, description, or producer..."
+                >
+            </div>
+
+            <div class="col-md-3">
+                <select name="category" class="form-select">
+                    {% for value, label in categories %}
+                        <option value="{{ value }}" {% if selected_category == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <select name="organic" class="form-select">
+                    {% for value, label in organic_options %}
+                        <option value="{{ value }}" {% if selected_organic == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <select name="allergen" class="form-select">
+                    {% for value, label in allergen_options %}
+                        <option value="{{ value }}" {% if selected_allergen == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-dark">
+                    Apply
+                </button>
+            </div>
+
+            <div class="col-auto">
+                <a href="{% url 'products:product_list' %}" class="btn btn-outline-secondary">
+                    Clear
+                </a>
+            </div>
+
+            <div class="col-auto">
+                <a href="{% url 'saved_products' %}" class="btn btn-outline-dark">
+                    Saved Products ({{ saved_items|length }})
+                </a>
+            </div>
+        </div>
+    </form>
+
+    {% if saved_items %}
+        <div class="mb-5">
+            <h3 class="mb-3">Saved Products</h3>
+            <div class="row g-3">
+                {% for item in saved_items %}
+                    <div class="col-md-6 col-lg-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <h5>{{ item.name }}</h5>
+                                <p><strong>Producer:</strong> {{ item.producer }}</p>
+                                <p>{{ item.description|truncatechars:80 }}</p>
+                                <p><strong>£{{ item.price|floatformat:2 }}</strong></p>
+
+                                <div class="d-flex gap-2">
+                                    <a href="{% url 'products:product_detail' item.product_id %}" class="btn btn-sm btn-dark">
+                                        View
+                                    </a>
+
+                                    <form method="post" action="{% url 'remove_saved_product' item.product_id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            Remove
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    {% if query %}
+        <div class="mb-4">
+            <h4 class="mb-3">Search results{% if query %} for "{{ query }}"{% endif %}</h4>
+
+            {% if all_products or surplus_products or seasonal_products or discounted_products %}
+                <div class="row g-3">
+                    {% for product in surplus_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4 border-warning">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                        <span class="badge bg-warning text-dark">{{ product.surplus_discount_percent }}% OFF</span>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if product.surplus_note %}
+                                        <p class="small text-muted mb-1">{{ product.surplus_note }}</p>
+                                    {% endif %}
+
+                                    {% if product.best_before_date %}
+                                        <p class="small text-danger mb-1"><strong>Best before:</strong> {{ product.best_before_date }}</p>
+                                    {% endif %}
+
+                                    <p class="small text-danger mb-2"><strong>{{ product.surplus_time_remaining }}</strong></p>
+
+                                    <p class="mb-3">
+                                        <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
+                                        <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
+                                    </p>
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-warning">
+                                            View Deal
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                    {% for product in seasonal_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                        <span class="badge bg-success">£{{ product.active_price|floatformat:2 }}</span>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if product.season_range_display %}
+                                        <p class="small text-muted mb-2">
+                                            Available: {{ product.season_range_display }}
+                                        </p>
+                                    {% endif %}
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                    {% for product in discounted_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4 position-relative">
+                                {% if product.discount_percent > 0 %}
+                                    <span class="badge bg-danger position-absolute top-0 start-0 m-2">
+                                        {{ product.discount_percent }}% OFF
+                                    </span>
+                                {% endif %}
+
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2 mt-3">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                    <p class="mb-2">
+                                        <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
+                                        <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
+                                    </p>
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-danger">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                    {% for product in all_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4 {% if product.is_surplus_active %}border-warning{% endif %}">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+
+                                        {% if product.is_surplus_active %}
+                                            <span class="badge bg-warning text-dark">{{ product.surplus_discount_percent }}% OFF</span>
+                                        {% elif product.discount_percent > 0 %}
+                                            <span class="badge bg-danger">{{ product.discount_percent }}% OFF</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">£{{ product.active_price|floatformat:2 }}</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if product.best_before_date %}
+                                        <p class="small text-danger mb-1">
+                                            <strong>Best before:</strong> {{ product.best_before_date }}
+                                        </p>
+                                    {% endif %}
+
+                                    <p class="mb-2">
+                                        {% if product.active_price != product.price %}
+                                            <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
+                                            <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
+                                        {% else %}
+                                            <span class="fw-bold">£{{ product.active_price|floatformat:2 }}</span>
+                                        {% endif %}
+                                    </p>
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic products found for your current search/filter.</p>
+                {% else %}
+                    <p class="text-muted">No results found.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% else %}
+        <!-- Surplus Deals -->
+        <div class="mb-5">
+            <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#E67E22;">
+                <strong>Surplus Deals</strong>
+            </div>
+
+            {% if surplus_products %}
+                <div class="row g-3">
+                    {% for product in surplus_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4 border-warning">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                        <span class="badge bg-warning text-dark">{{ product.surplus_discount_percent }}% OFF</span>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if product.surplus_note %}
+                                        <p class="small text-muted mb-1">{{ product.surplus_note }}</p>
+                                    {% endif %}
+
+                                    {% if product.best_before_date %}
+                                        <p class="small text-danger mb-1"><strong>Best before:</strong> {{ product.best_before_date }}</p>
+                                    {% endif %}
+
+                                    <p class="small text-danger mb-2"><strong>{{ product.surplus_time_remaining }}</strong></p>
+
+                                    <p class="mb-3">
+                                        <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
+                                        <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
+                                    </p>
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-warning">
+                                            View Deal
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic products found in surplus deals.</p>
+                {% else %}
+                    <p class="text-muted">No surplus deals available right now.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Seasonal Items -->
+        <div class="mb-5">
+            <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#4CAF50;">
+                <strong>Seasonal Items</strong>
+            </div>
+
+            {% if seasonal_products %}
+                <div class="row g-3">
+                    {% for product in seasonal_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                        <span class="badge bg-success">£{{ product.active_price|floatformat:2 }}</span>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                    {% if product.season_range_display %}
+                                        <p class="small text-muted mb-2">
+                                            Available: {{ product.season_range_display }}
+                                        </p>
+                                    {% endif %}
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+
+                                        <div class="d-flex gap-2">
+                                            <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
+                                                View
+                                            </a>
+                                            <a href="{% url 'save_product' product.id %}" class="btn btn-sm btn-outline-secondary">
+                                                Save
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic seasonal items available.</p>
+                {% else %}
+                    <p class="text-muted">No seasonal items available.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- Discounted Items -->
+        <div class="mb-5">
+            <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#FF5252;">
+                <strong>Discounted Items</strong>
+            </div>
+
+            {% if discounted_products %}
+                <div class="row g-3">
+                    {% for product in discounted_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4 position-relative">
+                                {% if product.discount_percent > 0 %}
+                                    <span class="badge bg-danger position-absolute top-0 start-0 m-2">
+                                        {{ product.discount_percent }}% OFF
+                                    </span>
+                                {% endif %}
+
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2 mt-3">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                    <p class="mb-2">
+                                        <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
+                                        <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
+                                    </p>
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-danger">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic discounted items available.</p>
+                {% else %}
+                    <p class="text-muted">No discounted items available.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <!-- All Items -->
+        <div class="mb-5">
+            <div class="d-inline-block px-3 py-2 rounded text-white mb-3" style="background-color:#2196F3;">
+                <strong>All Items</strong>
+            </div>
+
+            {% if all_products %}
+                <div class="row g-3">
+                    {% for product in all_products %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card shadow-sm h-100 rounded-4 {% if product.is_surplus_active %}border-warning{% endif %}">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
+                                <div class="card-body d-flex flex-column">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <h5 class="card-title mb-0">{{ product.name }}</h5>
+
+                                        {% if product.is_surplus_active %}
+                                            <span class="badge bg-warning text-dark">{{ product.surplus_discount_percent }}% OFF</span>
+                                        {% elif product.discount_percent > 0 %}
+                                            <span class="badge bg-danger">{{ product.discount_percent }}% OFF</span>
+                                        {% else %}
+                                            <span class="badge bg-primary">£{{ product.active_price|floatformat:2 }}</span>
+                                        {% endif %}
+                                    </div>
+
+                                    <p class="text-muted small mb-2">
+                                        {{ product.description|default:"No description available."|truncatechars:100 }}
+                                    </p>
+
+                                    <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
+                                    <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
+
+                                    <div class="mb-2">
+                                        {% if product.is_organic %}
+                                            <span class="badge bg-success">Certified Organic</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Certified</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if product.ai_grade %}
+                                        <div class="mb-2">
+                                            <span class="badge {{ product.get_ai_grade_badge_class }}">
+                                                AI Grade: {{ product.ai_grade }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                    <div class="mb-2">
+                                        {% if product.customer_status == "In Season" %}
+                                            <span class="badge bg-success">In Season</span>
+                                        {% elif product.customer_status == "Available Year-Round" %}
+                                            <span class="badge bg-primary">Available Year-Round</span>
+                                        {% elif product.customer_status == "Out of Stock" %}
+                                            <span class="badge bg-dark">Out of Stock</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ product.customer_status }}</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if product.season_range_display %}
+                                        <p class="small text-muted mb-2">
+                                            Available: {{ product.season_range_display }}
+                                        </p>
+                                    {% endif %}
+
+                                    {% if product.best_before_date %}
+                                        <p class="small text-danger mb-1">
+                                            <strong>Best before:</strong> {{ product.best_before_date }}
+                                        </p>
+                                    {% endif %}
+
+                                    {% if product.is_surplus_active %}
+                                        <p class="small text-danger mb-2"><strong>{{ product.surplus_time_remaining }}</strong></p>
+                                    {% endif %}
+
+                                    <p class="mb-2">
+                                        {% if product.active_price != product.price %}
+                                            <span class="text-muted text-decoration-line-through">£{{ product.price }}</span>
+                                            <span class="fw-bold text-danger ms-2">£{{ product.active_price|floatformat:2 }}</span>
+                                        {% else %}
+                                            <span class="fw-bold">£{{ product.active_price|floatformat:2 }}</span>
+                                        {% endif %}
+                                    </p>
+
+                                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">Stock: {{ product.stock }}</small>
+                                        <a href="{% url 'products:product_detail' product.id %}" class="btn btn-sm btn-outline-primary">
+                                            View
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                {% if selected_organic == "certified" %}
+                    <p class="text-muted">No certified organic products found in this category.</p>
+                {% else %}
+                    <p class="text-muted">No regular items available.</p>
+                {% endif %}
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

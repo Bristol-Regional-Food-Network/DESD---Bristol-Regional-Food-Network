@@ -1,0 +1,111 @@
+{% extends "base/base.html" %}
+
+{% block title %}Order #{{ order.id }} | Financial Report{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <a href="{% url 'manager_financial_reports' %}" class="text-decoration-none">
+        &larr; Back to Financial Reports
+    </a>
+
+    <h1 class="mt-2 mb-1">Commission Audit – Order #{{ order.id }}</h1>
+    <p class="text-muted">
+        Detailed breakdown linking the recorded order back to its commission
+        calculation and per-producer payout. Used as the audit trail for the
+        5% / 95% network split.
+    </p>
+
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'manager_orders' %}">Orders</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'manager_customers' %}">Customers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'manager_producers' %}">Producers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="{% url 'manager_financial_reports' %}">Financial Reports</a>
+        </li>
+    </ul>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Order Snapshot</h2>
+                    <p class="mb-1">
+                        <strong>Customer:</strong>
+                        {% if order.user %}{{ order.user.username }}{% else %}{{ order.cardholder_name }}{% endif %}
+                    </p>
+                    <p class="mb-1"><strong>Created:</strong> {{ order.created_at|date:"Y-m-d H:i" }}</p>
+                    <p class="mb-1"><strong>Status:</strong> {{ order.get_status_display }}</p>
+                    <p class="mb-1"><strong>Payment ref:</strong> {{ order.payment_reference|default:"-" }}</p>
+                    <p class="mb-0"><strong>Card:</strong> **** **** **** {{ order.card_last4 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Commission Calculation</h2>
+                    <div class="d-flex justify-content-between border-bottom py-1">
+                        <span>Subtotal (basis for commission)</span>
+                        <strong>£{{ subtotal|floatformat:2 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom py-1 text-success">
+                        <span>Network commission (5%)</span>
+                        <strong>£{{ commission|floatformat:2 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom py-1">
+                        <span>Producer payout total (95%)</span>
+                        <strong>£{{ producer_total|floatformat:2 }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span><strong>Order total billed</strong></span>
+                        <strong>£{{ order_total|floatformat:2 }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h2 class="h5 mb-3">Producer Payout Breakdown</h2>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Producer</th>
+                            <th>Status</th>
+                            <th>Delivery date</th>
+                            <th class="text-end">Subtotal</th>
+                            <th class="text-end">Payout (95%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in producer_breakdown %}
+                            <tr>
+                                <td>{{ p.producer_name }}</td>
+                                <td>{{ p.status }}</td>
+                                <td>{{ p.delivery_date|date:"Y-m-d" }}</td>
+                                <td class="text-end">£{{ p.subtotal|floatformat:2 }}</td>
+                                <td class="text-end"><strong>£{{ p.payout|floatformat:2 }}</strong></td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="5" class="text-muted">No per-producer breakdown recorded.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted small mb-0">
+                All values are rounded half-up to two decimals. Per-producer payouts
+                are computed from the producer's own subtotal so multi-vendor totals
+                are distributed fairly.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,238 @@
+{% extends "base/base.html" %}
+
+{% block title %}Producer Reports{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+      <h1 class="mb-1">Producer Reports</h1>
+      {% if producer %}
+        <p class="text-muted mb-0">Performance overview for {{ producer.display_name }}</p>
+      {% endif %}
+    </div>
+    <div class="d-flex gap-2">
+      <a class="btn btn-outline-dark" href="{% url 'producers:producer_dashboard' %}">Back to Dashboard</a>
+      <a class="btn btn-outline-primary" href="{% url 'producers:producer_orders' %}">View Orders</a>
+    </div>
+  </div>
+
+  {% if producer %}
+    {% if recent_new_orders %}
+      <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div><strong>{{ recent_new_orders }}</strong> new order{{ recent_new_orders|pluralize }} in the last 24 hours.</div>
+        <a href="{% url 'producers:producer_orders' %}?status=paid" class="btn btn-sm btn-outline-dark">Review new orders</a>
+      </div>
+    {% endif %}
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="text-muted">Products</h6>
+            <div class="fs-3 fw-bold">{{ product_count }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="text-muted">Orders</h6>
+            <div class="fs-3 fw-bold">{{ order_count }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="text-muted">Pending Orders</h6>
+            <div class="fs-3 fw-bold">{{ pending_order_count }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body">
+            <h6 class="text-muted">Fulfilled Items</h6>
+            <div class="fs-3 fw-bold">{{ fulfilled_items }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <div class="card h-100 border-success-subtle">
+          <div class="card-body">
+            <h6 class="text-muted">Total Earnings</h6>
+            <div class="fs-4 fw-bold">£{{ total_earnings }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100 border-info-subtle">
+          <div class="card-body">
+            <h6 class="text-muted">This Week</h6>
+            <div class="fs-4 fw-bold">£{{ earnings_this_week }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100 border-warning-subtle">
+          <div class="card-body">
+            <h6 class="text-muted">Items Sold</h6>
+            <div class="fs-4 fw-bold">{{ items_sold }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100 border-primary-subtle">
+          <div class="card-body">
+            <h6 class="text-muted">Avg Order Value</h6>
+            <div class="fs-4 fw-bold">£{{ average_order_value|floatformat:2 }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="card mb-4 border-success-subtle">
+      <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h4 class="mb-1">Weekly Payment Settlements</h4>
+            <p class="text-muted mb-0">Fulfilled order items only. The network commission is 5%, leaving a 95% producer payout.</p>
+          </div>
+          <a href="{% url 'producers:producer_settlement_csv' %}" class="btn btn-sm btn-outline-success">
+            Download CSV
+          </a>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <div class="border rounded p-3 bg-light h-100">
+              <small class="text-muted d-block">Gross fulfilled sales</small>
+              <strong>£{{ settlement_totals.gross_sales|floatformat:2 }}</strong>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded p-3 bg-light h-100">
+              <small class="text-muted d-block">Network commission deducted</small>
+              <strong>£{{ settlement_totals.commission_amount|floatformat:2 }}</strong>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="border rounded p-3 bg-light h-100">
+              <small class="text-muted d-block">Producer payout</small>
+              <strong>£{{ settlement_totals.producer_payout|floatformat:2 }}</strong>
+            </div>
+          </div>
+        </div>
+
+        {% if weekly_settlements %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Week</th>
+                  <th>Status</th>
+                  <th>Orders</th>
+                  <th>Items</th>
+                  <th>Gross Sales</th>
+                  <th>5% Commission</th>
+                  <th>95% Payout</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for settlement in weekly_settlements %}
+                  <tr>
+                    <td>{{ settlement.week_start|date:"d M Y" }} - {{ settlement.week_end|date:"d M Y" }}</td>
+                    <td>
+                      <span class="badge {% if settlement.status == 'Processed' %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                        {{ settlement.status }}
+                      </span>
+                    </td>
+                    <td>{{ settlement.order_count }}</td>
+                    <td>{{ settlement.item_count }}</td>
+                    <td>£{{ settlement.gross_sales|floatformat:2 }}</td>
+                    <td>£{{ settlement.commission_amount|floatformat:2 }}</td>
+                    <td>£{{ settlement.producer_payout|floatformat:2 }}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted mb-0">No fulfilled order items are available for settlement reporting yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="row g-4">
+      <div class="col-lg-7">
+        <div class="card h-100">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h4 class="mb-0">Recent Order Items</h4>
+              <a href="{% url 'producers:producer_orders' %}" class="btn btn-sm btn-outline-dark">Manage Orders</a>
+            </div>
+
+            {% if recent_order_items %}
+              <div class="list-group list-group-flush">
+                {% for item in recent_order_items %}
+                  <a href="{% url 'producers:producer_order_detail' item.order.id %}" class="list-group-item list-group-item-action px-0">
+                    <div class="d-flex justify-content-between mb-1">
+                      <strong>Order #{{ item.order.id }}</strong>
+                      <small class="text-muted">{{ item.order.created_at|date:"d M Y, H:i" }}</small>
+                    </div>
+                    <div>{{ item.product.name }} × {{ item.quantity }}</div>
+                    <small class="text-muted">
+                      Status:
+                      <span class="badge status-badge status-badge--{{ item.fulfilment_status }}">
+                        {{ item.get_fulfilment_status_display }}
+                      </span>
+                    </small>
+                  </a>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="text-muted mb-0">No order items yet.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-5">
+        <div class="card h-100">
+          <div class="card-body">
+            <h4 class="mb-3">My Products</h4>
+            {% if my_products %}
+              <div class="list-group list-group-flush">
+                {% for p in my_products %}
+                  <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                      <div class="fw-semibold">{{ p.name }}</div>
+                      <small class="text-muted">Stock: {{ p.stock }}</small>
+                    </div>
+                    <span class="badge bg-secondary">£{{ p.price }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <p class="text-muted mb-0">No products yet.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="alert alert-warning mb-0">Producer profile not found.</div>
+  {% endif %}
+</div>
+{% endblock %}

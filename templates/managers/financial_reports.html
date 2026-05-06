@@ -1,0 +1,217 @@
+{% extends "base/base.html" %}
+
+{% block title %}Financial Reports | Manager Dashboard{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1>Financial Reports</h1>
+    <p class="text-muted">
+        Network commission audit and reporting. Validates the
+        {{ commission_rate_pct }}% / {{ producer_rate_pct }}% commission split
+        across all orders for financial accuracy and tax compliance.
+    </p>
+
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/orders/' in request.path %}active{% endif %}" href="{% url 'manager_orders' %}">Orders</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/customers/' in request.path %}active{% endif %}" href="{% url 'manager_customers' %}">Customers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/producers/' in request.path %}active{% endif %}" href="{% url 'manager_producers' %}">Producers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/financial-reports' in request.path %}active{% endif %}" href="{% url 'manager_financial_reports' %}">Financial Reports</a>
+        </li>
+    </ul>
+
+    {# ---------- Filters ---------- #}
+    <form method="get" class="row g-2 mb-4 align-items-end">
+        <div class="col-md-2">
+            <label for="start" class="form-label small mb-1">Start Date</label>
+            <input type="date" class="form-control" id="start" name="start" value="{{ start_date|date:'Y-m-d' }}">
+        </div>
+        <div class="col-md-2">
+            <label for="end" class="form-label small mb-1">End Date</label>
+            <input type="date" class="form-control" id="end" name="end" value="{{ end_date|date:'Y-m-d' }}">
+        </div>
+        <div class="col-md-3">
+            <label for="producer" class="form-label small mb-1">Producer Filter</label>
+            <input type="text" class="form-control" id="producer" name="producer"
+                   value="{{ producer_filter }}" placeholder="Producer name">
+        </div>
+        <div class="col-md-2">
+            <label for="status" class="form-label small mb-1">Status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="">All</option>
+                {% for key, label in status_choices %}
+                    <option value="{{ key }}" {% if key == status_filter %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-dark flex-fill">Generate Report</button>
+            <a href="?start={{ start_date|date:'Y-m-d' }}&end={{ end_date|date:'Y-m-d' }}&producer={{ producer_filter }}&status={{ status_filter }}&export=csv"
+               class="btn btn-success">Export CSV</a>
+        </div>
+    </form>
+
+    {# ---------- Period totals ---------- #}
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title small text-muted mb-1">Orders Processed</h5>
+                    <p class="h4 mb-0">{{ totals.order_count }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title small text-muted mb-1">Total Order Value</h5>
+                    <p class="h4 mb-0">£{{ totals.total_order_value|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title small text-muted mb-1">
+                        Network Commission ({{ commission_rate_pct }}%)
+                    </h5>
+                    <p class="h4 mb-0 text-success">£{{ totals.total_commission|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title small text-muted mb-1">
+                        Producer Payout ({{ producer_rate_pct }}%)
+                    </h5>
+                    <p class="h4 mb-0">£{{ totals.total_producer_payout|floatformat:2 }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ---------- Order breakdown ---------- #}
+    <div class="table-responsive shadow-sm rounded bg-white p-3 mb-4">
+        <h2 class="h5 mb-3">Order Breakdown ({{ start_date|date:'d M Y' }} – {{ end_date|date:'d M Y' }})</h2>
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Date</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                    <th class="text-end">Subtotal</th>
+                    <th class="text-end">Commission (5%)</th>
+                    <th class="text-end">Producer (95%)</th>
+                    <th class="text-end">Order Total</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td><a href="{% url 'manager_financial_report_detail' row.order_id %}">{{ row.order_id }}</a></td>
+                    <td>{{ row.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{{ row.customer }}</td>
+                    <td>{{ row.status }}</td>
+                    <td class="text-end">£{{ row.subtotal|floatformat:2 }}</td>
+                    <td class="text-end text-success">£{{ row.commission|floatformat:2 }}</td>
+                    <td class="text-end">£{{ row.producer_total|floatformat:2 }}</td>
+                    <td class="text-end"><strong>£{{ row.order_total|floatformat:2 }}</strong></td>
+                    <td>
+                        <a href="{% url 'manager_financial_report_detail' row.order_id %}"
+                           class="btn btn-sm btn-outline-primary">View</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="9" class="text-muted text-center py-4">
+                    No orders in this date range.
+                </td></tr>
+                {% endfor %}
+            </tbody>
+            {% if rows %}
+            <tfoot>
+                <tr class="table-light">
+                    <th colspan="4" class="text-end">Period totals</th>
+                    <th class="text-end">£{{ totals.total_order_value|floatformat:2 }}</th>
+                    <th class="text-end text-success">£{{ totals.total_commission|floatformat:2 }}</th>
+                    <th class="text-end">£{{ totals.total_producer_payout|floatformat:2 }}</th>
+                    <th class="text-end">£{{ totals.total_with_commission|floatformat:2 }}</th>
+                    <th></th>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+    {# ---------- Monthly summary + YTD ---------- #}
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Monthly Summary (last 6 months)</h2>
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Month</th>
+                                    <th class="text-end">Orders</th>
+                                    <th class="text-end">Order Value</th>
+                                    <th class="text-end">Commission</th>
+                                    <th class="text-end">Producer Payout</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in monthly_summary %}
+                                <tr>
+                                    <td>{{ month.label }}</td>
+                                    <td class="text-end">{{ month.totals.order_count }}</td>
+                                    <td class="text-end">£{{ month.totals.total_order_value|floatformat:2 }}</td>
+                                    <td class="text-end text-success">£{{ month.totals.total_commission|floatformat:2 }}</td>
+                                    <td class="text-end">£{{ month.totals.total_producer_payout|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Year-to-Date Totals</h2>
+                    <p class="mb-2">
+                        <strong>Orders processed:</strong> {{ ytd_totals.order_count }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>Total order value:</strong> £{{ ytd_totals.total_order_value|floatformat:2 }}
+                    </p>
+                    <p class="mb-2">
+                        <strong>Total commission ({{ commission_rate_pct }}%):</strong>
+                        <span class="text-success">£{{ ytd_totals.total_commission|floatformat:2 }}</span>
+                    </p>
+                    <p class="mb-0">
+                        <strong>Total producer payout ({{ producer_rate_pct }}%):</strong>
+                        £{{ ytd_totals.total_producer_payout|floatformat:2 }}
+                    </p>
+                    <hr>
+                    <p class="text-muted small mb-0">
+                        Figures are derived from the recorded order totals, with the
+                        {{ commission_rate_pct }}% / {{ producer_rate_pct }}% split applied
+                        and rounded half-up to two decimals for accounting compliance.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base/base.html" %}
+
+{% block title %}Recommendations{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">User Recommendations</h1>
+            <p class="text-muted mb-0">{{ total }} recommendations generated.</p>
+        </div>
+        <a href="{% url 'ai_engineer_dashboard' %}" class="btn btn-outline-dark">← Back</a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            Random Forest Predictions (Task 1)
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User</th>
+                            <th>Product</th>
+                            <th>Confidence (%)</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for rec in recommendations %}
+                        <tr>
+                            <td><code>{{ rec.user_id }}</code></td>
+                            <td><strong>{{ rec.product_name }}</strong></td>
+                            <td>{{ rec.confidence }}%</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">
+                                No recommendations yet. Train the model first.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

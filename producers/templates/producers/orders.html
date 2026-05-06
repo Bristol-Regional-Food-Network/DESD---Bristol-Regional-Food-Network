@@ -1,0 +1,132 @@
+{% extends "base/base.html" %}
+
+{% block title %}Producer Orders{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="mb-1">Order Management</h1>
+            <p class="text-muted mb-0">Search, sort and manage the orders placed against {{ producer.display_name }} products.</p>
+        </div>
+        <a href="{% url 'producers:producer_dashboard' %}" class="btn btn-outline-dark">Back to Dashboard</a>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a href="?status=all&item_status={{ selected_item_status }}&sort={{ selected_sort }}&q={{ search_query }}" class="btn btn-sm {% if selected_order_status == 'all' %}btn-dark{% else %}btn-outline-dark{% endif %}">All Orders</a>
+        <a href="?status=paid&item_status={{ selected_item_status }}&sort={{ selected_sort }}&q={{ search_query }}" class="btn btn-sm {% if selected_order_status == 'paid' %}btn-dark{% else %}btn-outline-dark{% endif %}">Paid</a>
+        <a href="?status=partially_fulfilled&item_status={{ selected_item_status }}&sort={{ selected_sort }}&q={{ search_query }}" class="btn btn-sm {% if selected_order_status == 'partially_fulfilled' %}btn-info text-white{% else %}btn-outline-info{% endif %}">Partially Fulfilled</a>
+        <a href="?status=fulfilled&item_status={{ selected_item_status }}&sort={{ selected_sort }}&q={{ search_query }}" class="btn btn-sm {% if selected_order_status == 'fulfilled' %}btn-success{% else %}btn-outline-success{% endif %}">Fulfilled</a>
+        <a href="?status=cancelled&item_status={{ selected_item_status }}&sort={{ selected_sort }}&q={{ search_query }}" class="btn btn-sm {% if selected_order_status == 'cancelled' %}btn-danger{% else %}btn-outline-danger{% endif %}">Cancelled</a>
+    </div>
+
+    <form method="get" class="row g-3 align-items-end mb-4">
+        <div class="col-lg-3">
+            <label class="form-label" for="q">Search</label>
+            <input class="form-control" id="q" name="q" value="{{ search_query }}" placeholder="Order ID, customer or product">
+        </div>
+        <div class="col-lg-3">
+            <label class="form-label" for="status">Order status</label>
+            <select class="form-select" id="status" name="status">
+                <option value="all" {% if selected_order_status == "all" %}selected{% endif %}>All</option>
+                {% for value, label in order_status_options %}
+                    <option value="{{ value }}" {% if selected_order_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2">
+            <label class="form-label" for="item_status">Item fulfilment</label>
+            <select class="form-select" id="item_status" name="item_status">
+                <option value="all" {% if selected_item_status == "all" %}selected{% endif %}>All</option>
+                <option value="pending" {% if selected_item_status == "pending" %}selected{% endif %}>Pending</option>
+                <option value="fulfilled" {% if selected_item_status == "fulfilled" %}selected{% endif %}>Fulfilled</option>
+                <option value="cancelled" {% if selected_item_status == "cancelled" %}selected{% endif %}>Cancelled</option>
+            </select>
+        </div>
+        <div class="col-lg-2">
+            <label class="form-label" for="sort">Sort</label>
+            <select class="form-select" id="sort" name="sort">
+                <option value="newest" {% if selected_sort == "newest" %}selected{% endif %}>Newest first</option>
+                <option value="oldest" {% if selected_sort == "oldest" %}selected{% endif %}>Oldest first</option>
+                <option value="total_desc" {% if selected_sort == "total_desc" %}selected{% endif %}>Highest total</option>
+                <option value="total_asc" {% if selected_sort == "total_asc" %}selected{% endif %}>Lowest total</option>
+            </select>
+        </div>
+        <div class="col-lg-2 d-flex gap-2">
+            <button type="submit" class="btn btn-dark">Apply</button>
+            <a href="{% url 'producers:producer_orders' %}" class="btn btn-outline-secondary">Reset</a>
+        </div>
+    </form>
+
+    {% if grouped_orders %}
+        <div class="d-grid gap-3">
+            {% for entry in grouped_orders %}
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap justify-content-between gap-3 mb-3">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                    <h4 class="mb-0">Order #{{ entry.order.id }}</h4>
+                                    <span class="badge text-bg-{{ entry.order.status|default:'secondary' }} status-badge status-badge--{{ entry.order.status }}">{{ entry.order.get_status_display }}</span>
+                                </div>
+                                <div class="text-muted">Customer: {% if entry.customer %}{{ entry.customer.username }}{% else %}Guest{% endif %}</div>
+                                <div class="text-muted">Placed: {{ entry.order.created_at|date:"d M Y, H:i" }}</div>
+                            </div>
+                            <div class="text-end">
+                                <div><strong>Your total:</strong> £{{ entry.producer_total }}</div>
+                                <div><strong>Your units:</strong> {{ entry.item_count }}</div>
+                                <div><strong>Order lines:</strong> {{ entry.line_count }}</div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4"><div class="border rounded p-2 h-100"><strong>Pending lines:</strong> {{ entry.pending_count }}</div></div></div>
+                            <div class="col-md-4"><div class="border rounded p-2 h-100"><strong>Fulfilled lines:</strong> {{ entry.fulfilled_count }}</div></div></div>
+                            <div class="col-md-4"><div class="border rounded p-2 h-100"><strong>Cancelled lines:</strong> {{ entry.cancelled_count }}</div></div></div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table align-middle mb-3">
+                                <thead>
+                                    <tr>
+                                        <th>Product</th>
+                                        <th>Qty</th>
+                                        <th>Unit Price</th>
+                                        <th>Line Total</th>
+                                        <th>Fulfilment</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in entry.items %}
+                                        <tr>
+                                            <td>{{ item.product.name }}</td>
+                                            <td>{{ item.quantity }}</td>
+                                            <td>£{{ item.unit_price }}</td>
+                                            <td>£{{ item.line_total }}</td>
+                                            <td><span class="badge text-bg-{{ item.fulfilment_status }} status-badge status-badge--{{ item.fulfilment_status }}">{{ item.get_fulfilment_status_display }}</span></td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{% url 'producers:producer_order_detail' entry.order.id %}" class="btn btn-outline-dark">Open Order</a>
+                            {% if entry.has_pending and entry.order.status != 'cancelled' %}
+                                <form method="post" action="{% url 'producers:bulk_fulfil_order' entry.order.id %}" onsubmit="return confirm('Mark all pending items in Order #{{ entry.order.id }} as fulfilled?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success">Mark All Fulfilled</button>
+                                </form>
+                            {% else %}
+                                <button type="button" class="btn btn-outline-secondary" disabled>No pending items</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-light border mb-0">No matching orders found for your products.</div>
+    {% endif %}
+</div>
+{% endblock %}

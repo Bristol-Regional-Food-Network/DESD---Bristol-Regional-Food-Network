@@ -1,0 +1,213 @@
+{% extends "base/base.html" %}
+
+{% block title %}Your Basket | BRFN{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1 class="h3 mb-4">Your Basket</h1>
+
+  {% if producer_groups %}
+    <div class="card shadow-sm mb-4">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Delivery Postcode</h2>
+        <form method="post" class="row g-2 align-items-end">
+          {% csrf_token %}
+          <div class="col-md-6">
+            <label for="customer_postcode" class="form-label">Your postcode</label>
+            <input
+              type="text"
+              name="customer_postcode"
+              id="customer_postcode"
+              class="form-control"
+              value="{{ customer_postcode }}"
+              placeholder="e.g. BS1 4DJ"
+            >
+          </div>
+          <div class="col-md-auto">
+            <button type="submit" class="btn btn-outline-dark">Update postcode</button>
+          </div>
+        </form>
+
+        {% if total_food_miles %}
+          <div class="mt-3">
+            <strong>Total estimated food miles: {{ total_food_miles }} miles</strong>
+          </div>
+        {% else %}
+          <div class="mt-3 text-muted small">
+            Enter your postcode to calculate estimated food miles.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% for group in producer_groups %}
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Producer: {{ group.producer_name }}</h2>
+          <div class="border rounded p-3 bg-light mb-3 col-md-6 col-lg-5">
+            <p class="mb-2">
+              <strong>Producer postcode:</strong>
+              {% if group.producer_postcode %}
+                {{ group.producer_postcode }}
+              {% else %}
+                <span class="text-muted">Not available</span>
+              {% endif %}
+            </p>
+
+            <div
+              id="basket-map-{{ forloop.counter }}"
+              class="rounded border mb-3"
+              style="height: 160px;"
+              data-customer-postcode="{{ customer_postcode }}"
+              data-producer-postcode="{{ group.producer_postcode }}"
+              data-producer-name="{{ group.producer_name }}"
+            ></div>
+
+            {% if group.food_miles_total %}
+              <p class="fw-semibold mb-2">
+                {{ group.food_miles_total }} miles from delivery postcode.
+              </p>
+
+              {% if group.food_miles_total <= 20 %}
+                <span class="badge bg-success">Within 20-mile radius</span>
+              {% else %}
+                <span class="badge bg-danger">Outside 20-mile radius</span>
+              {% endif %}
+            {% else %}
+              <p class="text-muted mb-0">
+                Distance could not be calculated for this producer.
+              </p>
+            {% endif %}
+          </div>
+
+          {% for item in group.items %}
+            <div class="d-flex justify-content-between align-items-center border-bottom py-3">
+              <div>
+                <h3 class="h6 mb-1">{{ item.name }}</h3>
+                <div class="text-muted small">£{{ item.price|floatformat:2 }} per {{ item.unit_display }}</div>
+                <div class="small">Subtotal: £{{ item.subtotal|floatformat:2 }}</div>
+                <div class="small {% if item.has_allergen_warning %}text-warning{% else %}text-muted{% endif %}">
+                  <strong>Allergens:</strong> {{ item.allergen_info }}
+                </div>
+
+                {% if item.food_miles is not None %}
+                  <div class="small text-muted">Estimated food miles: {{ item.food_miles }} miles</div>
+                {% endif %}
+              </div>
+
+              <div class="d-flex align-items-center gap-2">
+                <form method="post" action="{% url 'basket:basket_update' item.product_id %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="decrease">
+                  <button
+                    type="submit"
+                    class="btn btn-outline-dark btn-sm"
+                    {% if item.quantity <= 1 %}disabled{% endif %}
+                  >
+                    -
+                  </button>
+                </form>
+
+                <span class="px-2">{{ item.quantity }}</span>
+
+                <form method="post" action="{% url 'basket:basket_update' item.product_id %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="increase">
+                  <button type="submit" class="btn btn-outline-dark btn-sm">+</button>
+                </form>
+
+                <form method="post" action="{% url 'basket:basket_remove' item.product_id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+
+          <div class="mt-3 d-flex justify-content-between">
+            <strong>Producer subtotal: £{{ group.subtotal|floatformat:2 }}</strong>
+            {% if group.food_miles_total %}
+              <strong>Producer food miles: {{ group.food_miles_total }} miles</strong>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h3 class="h5 mb-1">Total: £{{ basket_total|floatformat:2 }}</h3>
+        {% if total_food_miles %}
+          <div class="text-muted">Estimated basket food miles: {{ total_food_miles }} miles</div>
+        {% endif %}
+      </div>
+      <a class="btn btn-dark" href="{% url 'basket:checkout' %}">
+        Proceed to Checkout
+      </a>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      Your basket is empty.
+    </div>
+  {% endif %}
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll("[id^='basket-map-']").forEach(function (mapDiv) {
+    const customerPostcode = mapDiv.dataset.customerPostcode;
+    const producerPostcode = mapDiv.dataset.producerPostcode;
+    const producerName = mapDiv.dataset.producerName;
+
+    if (!customerPostcode || !producerPostcode) {
+      mapDiv.style.display = "none";
+      return;
+    }
+
+    fetch(`/basket/distance-map/?customer_postcode=${encodeURIComponent(customerPostcode)}&producer_postcode=${encodeURIComponent(producerPostcode)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (!data.success) {
+          mapDiv.style.display = "none";
+          return;
+        }
+
+        const map = L.map(mapDiv.id);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+        }).addTo(map);
+
+        L.marker([data.customer.lat, data.customer.lng])
+          .addTo(map)
+          .bindPopup("Delivery postcode: " + data.customer_postcode);
+
+        L.marker([data.producer.lat, data.producer.lng])
+          .addTo(map)
+          .bindPopup("Producer: " + producerName + " (" + data.producer_postcode + ")");
+
+        L.polyline([
+          [data.customer.lat, data.customer.lng],
+          [data.producer.lat, data.producer.lng]
+        ]).addTo(map);
+
+        const bounds = L.latLngBounds([
+          [data.customer.lat, data.customer.lng],
+          [data.producer.lat, data.producer.lng]
+        ]);
+
+        map.fitBounds(bounds, {
+          padding: [25, 25]
+        });
+
+        setTimeout(() => {
+          map.invalidateSize();
+        }, 200);
+      });
+  });
+});
+</script>
+{% endblock %}

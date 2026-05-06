@@ -1,0 +1,72 @@
+{% extends "base/base.html" %}
+
+{% block title %}Manager Dashboard | BRFN{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1>Manager Dashboard</h1>
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/orders/' in request.path %}active{% endif %}" href="{% url 'manager_orders' %}">Orders</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/customers/' in request.path %}active{% endif %}" href="{% url 'manager_customers' %}">Customers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/producers/' in request.path %}active{% endif %}" href="{% url 'manager_producers' %}">Producers</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if '/manager/financial-reports' in request.path %}active{% endif %}" href="{% url 'manager_financial_reports' %}">Financial Reports</a>
+        </li>
+    </ul>
+    <p>Welcome to the manager area</p>
+    
+    <div class="row mt-4">
+        <div class="col-md-3 d-none">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Overview</h5>
+                    <p class="card-text">Manager dashboard summary and KPIs (coming).</p>
+                    <a href="{% url 'manager_dashboard' %}" class="btn btn-outline-primary mt-auto">Dashboard Home</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Orders</h5>
+                    <p class="card-text">View and manage recent orders.</p>
+                    <a href="{% url 'manager_orders' %}" class="btn btn-primary mt-auto">View Orders</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Customers</h5>
+                    <p class="card-text">Browse and inspect customer accounts.</p>
+                    <a href="{% url 'manager_customers' %}" class="btn btn-primary mt-auto">View Customers</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Producers</h5>
+                    <p class="card-text">Manage producer records and contact details.</p>
+                    <a href="{% url 'manager_producers' %}" class="btn btn-primary mt-auto">View Producers</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">Financial Reports</h5>
+                    <p class="card-text">Network commission audit, monthly summaries and CSV export.</p>
+                    <a href="{% url 'manager_financial_reports' %}" class="btn btn-primary mt-auto">View Reports</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
