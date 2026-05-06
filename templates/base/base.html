@@ -71,10 +71,16 @@
                     </a>
 
                     <!-- BAG (CUSTOMER ONLY) -->
-                    {% if user.userprofile.role == "customer" %}
+                    {% if user.userprofile.role == "customer" or user.userprofile.role == "community_group" or user.userprofile.role == "restaurant" %}
                     <li class="nav-item">
                         <a class="btn btn-outline-light btn-sm" href="{% url 'basket:basket_detail' %}">
                             Bag ({{ request.session.basket|length|default:0 }})
+                        </a>
+                    </li>
+                    {# TC-018: Recurring orders — visible to customer / restaurant accounts #}
+                    <li class="nav-item">
+                        <a class="btn btn-outline-light btn-sm" href="{% url 'basket:recurring_orders_list' %}">
+                            Recurring Orders
                         </a>
                     </li>
                     {% endif %}

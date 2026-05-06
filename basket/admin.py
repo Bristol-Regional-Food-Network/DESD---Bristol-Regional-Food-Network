@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Order, OrderItem, ProducerOrder
+from .models import Order, OrderItem, ProducerOrder, OrderStatusHistory, RecurringOrder, RecurringOrderItem
 
 
 class OrderItemInline(admin.TabularInline):
@@ -146,3 +146,48 @@ class OrderItemAdmin(admin.ModelAdmin):
     def subtotal(self, obj):
         return obj.subtotal if obj.pk else 0
     subtotal.short_description = "Subtotal"
+
+
+class RecurringOrderItemInline(admin.TabularInline):
+    model = RecurringOrderItem
+    extra = 0
+
+
+
+
+@admin.register(OrderStatusHistory)
+class OrderStatusHistoryAdmin(admin.ModelAdmin):
+    list_display = ("order", "order_item", "old_status", "new_status", "changed_by", "created_at")
+    list_filter = ("old_status", "new_status", "created_at")
+    search_fields = ("order__id", "order_item__product_name", "note", "changed_by__username")
+    readonly_fields = ("created_at",)
+
+
+@admin.register(RecurringOrder)
+class RecurringOrderAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "name",
+        "user",
+        "frequency",
+        "order_day",
+        "delivery_day",
+        "next_run_date",
+        "status",
+    )
+    list_filter = ("status", "frequency", "order_day", "delivery_day")
+    search_fields = ("name", "user__username", "cardholder_name")
+    inlines = [RecurringOrderItemInline]
+
+
+@admin.register(RecurringOrderItem)
+class RecurringOrderItemAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "recurring_order",
+        "product_name",
+        "producer_name",
+        "quantity",
+        "next_quantity_override",
+    )
+    search_fields = ("product_name", "producer_name", "recurring_order__id")

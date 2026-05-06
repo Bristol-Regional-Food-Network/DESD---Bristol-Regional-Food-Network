@@ -44,6 +44,59 @@ class ProducerRegistrationForm(BaseRegistrationForm):
         ]
 
 
+class CommunityGroupRegistrationForm(BaseRegistrationForm):
+    organisation_name = forms.CharField(required=True, label="Organisation Name")
+    organisation_type = forms.ChoiceField(
+        required=True,
+        label="Organisation Type",
+        choices=[
+            ("school", "School"),
+            ("charity", "Charity"),
+            ("community_group", "Community Group"),
+            ("other", "Other"),
+        ],
+    )
+    contact_name = forms.CharField(required=True, label="Contact Name")
+    address = forms.CharField(required=True, label="Organisation Address")
+    postcode = forms.CharField(required=True, label="Postcode")
+
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "email",
+            "password",
+            "organisation_name",
+            "organisation_type",
+            "contact_name",
+            "address",
+            "postcode",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["organisation_type"].widget.attrs.update({"class": "form-select"})
+
+
+class RestaurantRegistrationForm(BaseRegistrationForm):
+    business_name = forms.CharField(required=True, label="Restaurant / Business Name")
+    contact_name = forms.CharField(required=True, label="Contact Name")
+    address = forms.CharField(required=True, label="Business Address")
+    postcode = forms.CharField(required=True, label="Business Postcode")
+
+    class Meta:
+        model = User
+        fields = [
+            "username",
+            "email",
+            "password",
+            "business_name",
+            "contact_name",
+            "address",
+            "postcode",
+        ]
+
+
 class EmployeeRegistrationForm(BaseRegistrationForm):
     role = forms.ChoiceField(
         choices=[

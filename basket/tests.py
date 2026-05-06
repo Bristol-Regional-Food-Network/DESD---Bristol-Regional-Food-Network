@@ -224,3 +224,101 @@ class BasketFlowTests(TestCase):
         resp = self.client.get(reverse("basket:basket_detail"))
         self.assertEqual(resp.status_code, 302)
         self.assertIn("/login", resp.url)
+
+
+class CheckoutSpecialInstructionsTests(TestCase):
+    def setUp(self):
+        self.producer = _producer()
+        self.producer.display_name = "Delivery Farm"
+        self.producer.postcode = "BS1 4DJ"
+        self.producer.save()
+        self.product = _product(self.producer, name="Potatoes", price=Decimal("2.50"), stock=5)
+        self.user = User.objects.create_user(username="checkout_buyer", password="pw12345!")
+        self.user.userprofile.address = "45 Park Street"
+        self.user.userprofile.postcode = "BS1 5JG"
+        self.user.userprofile.save()
+        self.client.login(username="checkout_buyer", password="pw12345!")
+
+    def _valid_checkout_payload(self):
+        next_year = (datetime.now().year + 1) % 100
+        delivery_date = (date.today() + timedelta(days=3)).isoformat()
+        return {
+            "cardholder_name": "Checkout Buyer",
+            "card_number": "4242424242424242",
+            "expiry_month": 12,
+            "expiry_year": next_year,
+            "cvv": "123",
+            "billing_address": "45 Park Street",
+            "city": "Bristol",
+            "postcode": "BS1 5JG",
+            "country": "UK",
+            "special_delivery_instructions": "Please deliver to the kitchen entrance.",
+            "delivery_date_delivery-farm": delivery_date,
+        }
+
+    def test_checkout_saves_special_delivery_instructions(self):
+        session = self.client.session
+        session["basket"] = {
+            str(self.product.id): {
+                "name": self.product.name,
+                "price": float(self.product.price),
+                "quantity": 2,
+                "producer": self.producer.display_name,
+                "producer_postcode": self.producer.postcode,
+                "unit_display": self.product.unit_display,
+                "allergen_info": self.product.allergen_display,
+                "has_allergen_warning": self.product.has_allergen_warning,
+            }
+        }
+        session.save()
+
+        response = self.client.post(reverse("basket:checkout"), self._valid_checkout_payload())
+
+        self.assertEqual(response.status_code, 200)
+        order = Order.objects.get(user=self.user)
+        self.assertEqual(order.special_delivery_instructions, "Please deliver to the kitchen entrance.")
+
+    def test_customer_order_detail_displays_special_delivery_instructions(self):
+        order = Order.objects.create(
+            user=self.user,
+            cardholder_name="Checkout Buyer",
+            card_last4="4242",
+            billing_address="45 Park Street",
+            city="Bristol",
+            postcode="BS1 5JG",
+            country="UK",
+            delivery_date=date.today() + timedelta(days=3),
+            special_delivery_instructions="Leave with reception.",
+            total_amount=Decimal("5.00"),
+        )
+
+        response = self.client.get(reverse("basket:order_detail", args=[order.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Leave with reception.")
+
+
+class CommunityGroupBulkOrderTests(TestCase):
+    def setUp(self):
+        self.producer = _producer()
+        self.product = _product(self.producer, name="Bulk Potatoes", price=Decimal("1.00"), stock=60)
+        self.user = User.objects.create_user(username="community", password="pw12345!")
+        self.user.userprofile.role = "community_group"
+        self.user.userprofile.organisation_name = "St Mary's School"
+        self.user.userprofile.organisation_type = "school"
+        self.user.userprofile.address = "1 School Road"
+        self.user.userprofile.postcode = "BS1 5JG"
+        self.user.userprofile.save()
+        self.client.login(username="community", password="pw12345!")
+
+    def test_community_group_can_add_bulk_quantity_up_to_stock(self):
+        self.client.post(reverse("basket:basket_add", args=[self.product.id]), {"quantity": 50})
+        basket = self.client.session.get("basket", {})
+        self.assertEqual(basket[str(self.product.id)]["quantity"], 50)
+
+    def test_community_group_bulk_quantity_is_capped_at_stock(self):
+        self.client.post(reverse("basket:basket_add", args=[self.product.id]), {"quantity": 999})
+        basket = self.client.session.get("basket", {})
+        self.assertEqual(basket[str(self.product.id)]["quantity"], 60)
+
+

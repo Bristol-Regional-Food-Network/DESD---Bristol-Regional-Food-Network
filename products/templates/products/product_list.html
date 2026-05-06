@@ -36,6 +36,9 @@
 
                                 <p class="small mb-1"><strong>Producer:</strong> {{ rec.product.producer.display_name }}</p>
                                 <p class="small mb-1"><strong>Category:</strong> {{ rec.product.get_category_display }}</p>
+                                <p class="small mb-2">
+                                    <strong>Allergens:</strong> {{ rec.product.allergen_display|truncatechars:60 }}
+                                </p>
 
                                 <div class="mb-2">
                                     {% if rec.product.is_organic %}
@@ -108,10 +111,20 @@
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="organic" class="form-select">
                     {% for value, label in organic_options %}
                         <option value="{{ value }}" {% if selected_organic == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <select name="allergen" class="form-select">
+                    {% for value, label in allergen_options %}
+                        <option value="{{ value }}" {% if selected_allergen == value %}selected{% endif %}>
                             {{ label }}
                         </option>
                     {% endfor %}
@@ -197,6 +210,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -259,6 +275,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -312,6 +331,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -370,6 +392,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -449,6 +474,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -529,6 +557,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -604,6 +635,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -679,6 +713,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}

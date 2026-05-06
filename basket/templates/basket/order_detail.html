@@ -14,6 +14,9 @@
 
             <p><strong>Order Date:</strong> {{ order.created_at }}</p>
             <p><strong>Delivery Date:</strong> {{ order.delivery_date }}</p>
+            {% if order.special_delivery_instructions %}
+                <p><strong>Special Delivery Instructions:</strong> {{ order.special_delivery_instructions }}</p>
+            {% endif %}
             <p><strong>Status:</strong> {{ order.get_status_display }}</p>
             <p><strong>Delivery Address:</strong> {{ order.billing_address }}, {{ order.city }}, {{ order.postcode }}, {{ order.country }}</p>
             <p><strong>Payment:</strong> {{ masked_payment }}</p>
@@ -70,3 +73,26 @@
     </div>
 </div>
 {% endblock %}
+
+{% if order.status_history.all %}
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <h3 class="h5 mb-3">Status History</h3>
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Time</th><th>Product</th><th>Update</th><th>Producer Note</th></tr></thead>
+                <tbody>
+                    {% for update in order.status_history.all %}
+                        <tr>
+                            <td>{{ update.created_at|date:"d M Y, H:i" }}</td>
+                            <td>{% if update.order_item %}{{ update.order_item.product_name }}{% else %}Order update{% endif %}</td>
+                            <td>{{ update.old_status|title }} → {{ update.new_status|title }}</td>
+                            <td>{{ update.note|default:"—" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}

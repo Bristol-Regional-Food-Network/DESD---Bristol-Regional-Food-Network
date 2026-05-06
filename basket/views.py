@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 import math
@@ -11,11 +11,28 @@ from django.contrib import messages
 from django.utils import timezone
 from django.utils.text import slugify
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
 from products.models import Product
 from products.stock_alerts import check_and_create_stock_alert
 from .forms import PaymentForm
-from .models import Order, OrderItem, ProducerOrder
+from .models import Order, OrderItem, ProducerOrder, RecurringOrder, RecurringOrderItem
+
+
+def _next_weekday(start_date, target_weekday):
+    """Return the next date >= ``start_date`` that falls on ``target_weekday``."""
+    days_ahead = (target_weekday - start_date.weekday()) % 7
+    if days_ahead == 0:
+        days_ahead = 7
+    return start_date + timedelta(days=days_ahead)
+
+
+def _resolve_delivery_after(order_date, delivery_weekday):
+    """Pick the first delivery_weekday strictly after the order_date."""
+    days_ahead = (delivery_weekday - order_date.weekday()) % 7
+    if days_ahead == 0:
+        days_ahead = 7
+    return order_date + timedelta(days=days_ahead)
 
 
 COMMISSION_RATE = Decimal("0.05")
@@ -62,8 +79,12 @@ def _postcode_coordinates(postcode):
     if not postcode:
         return None
 
-    nomi = pgeocode.Nominatim("GB")
-    result = nomi.query_postal_code(postcode)
+    try:
+        nomi = pgeocode.Nominatim("GB")
+        result = nomi.query_postal_code(postcode)
+    except Exception:
+        # Keep checkout/basket usable if postcode data cannot be downloaded/cached.
+        return None
 
     if result is None:
         return None
@@ -171,6 +192,8 @@ def _build_checkout_groups(basket, customer_postcode=""):
             "name": product.name,
             "producer": producer_name,
             "unit_display": getattr(product, "unit_display", "each"),
+            "allergen_info": product.allergen_display,
+            "has_allergen_warning": product.has_allergen_warning,
             "price": current_price,
             "quantity": quantity,
             "subtotal": subtotal,
@@ -190,6 +213,8 @@ def _build_checkout_groups(basket, customer_postcode=""):
             "producer": producer_name,
             "producer_postcode": producer_postcode,
             "unit_display": getattr(product, "unit_display", "each"),
+            "allergen_info": product.allergen_display,
+            "has_allergen_warning": product.has_allergen_warning,
         }
 
         if basket.get(str(product.id)) != updated_session_item:
@@ -273,6 +298,8 @@ def basket_add(request, product_id):
             "producer": product.producer.display_name,
             "producer_postcode": getattr(product.producer, "postcode", ""),
             "unit_display": getattr(product, "unit_display", "each"),
+            "allergen_info": product.allergen_display,
+            "has_allergen_warning": product.has_allergen_warning,
         }
 
     request.session.modified = True
@@ -310,6 +337,8 @@ def basket_update(request, product_id):
             basket[product_id]["producer"] = getattr(product.producer, "display_name", "Unknown Producer")
             basket[product_id]["producer_postcode"] = getattr(product.producer, "postcode", "")
             basket[product_id]["unit_display"] = getattr(product, "unit_display", "each")
+            basket[product_id]["allergen_info"] = product.allergen_display
+            basket[product_id]["has_allergen_warning"] = product.has_allergen_warning
 
         request.session.modified = True
 
@@ -431,6 +460,7 @@ def checkout(request):
                     city=cleaned["city"],
                     postcode=cleaned["postcode"],
                     country=cleaned["country"],
+                    special_delivery_instructions=cleaned.get("special_delivery_instructions", ""),
                     delivery_date=parent_delivery_date,
                     payment_reference=payment_reference,
                     total_amount=grand_total,
@@ -447,6 +477,7 @@ def checkout(request):
                     city=cleaned["city"],
                     postcode=cleaned["postcode"],
                     country=cleaned["country"],
+                    special_delivery_instructions=cleaned.get("special_delivery_instructions", ""),
                     delivery_date=parent_delivery_date,
                     payment_reference=payment_reference,
                     total_amount=grand_total,
@@ -501,6 +532,69 @@ def checkout(request):
                     "items": group["items"],
                 })
 
+            # ----------------------------------------------------------------
+            # TC-018: optionally save this checkout as a recurring template.
+            # ----------------------------------------------------------------
+            recurring_template = None
+            if request.POST.get("make_recurring") == "on":
+                frequency = request.POST.get("recurring_frequency", RecurringOrder.FREQ_WEEKLY)
+                if frequency not in dict(RecurringOrder.FREQUENCY_CHOICES):
+                    frequency = RecurringOrder.FREQ_WEEKLY
+
+                try:
+                    order_day = int(request.POST.get("recurring_order_day", 0))
+                except (TypeError, ValueError):
+                    order_day = 0
+                try:
+                    delivery_day = int(request.POST.get("recurring_delivery_day", 2))
+                except (TypeError, ValueError):
+                    delivery_day = 2
+
+                order_day = max(0, min(6, order_day))
+                delivery_day = max(0, min(6, delivery_day))
+
+                today = timezone.localdate()
+                next_run = _next_weekday(today, order_day)
+                next_delivery = _resolve_delivery_after(next_run, delivery_day)
+
+                recurring_template = RecurringOrder.objects.create(
+                    user=request.user,
+                    name=request.POST.get("recurring_name", "").strip() or "Weekly order",
+                    frequency=frequency,
+                    order_day=order_day,
+                    delivery_day=delivery_day,
+                    cardholder_name=cleaned["cardholder_name"],
+                    card_last4=card_last4,
+                    billing_address=cleaned["billing_address"],
+                    city=cleaned["city"],
+                    postcode=cleaned["postcode"],
+                    country=cleaned["country"],
+                    next_run_date=next_run,
+                    next_delivery_date=next_delivery,
+                    status=RecurringOrder.STATUS_ACTIVE,
+                )
+
+                for group in producer_groups:
+                    for item in group["items"]:
+                        product = Product.objects.filter(id=item["product_id"]).first()
+                        RecurringOrderItem.objects.create(
+                            recurring_order=recurring_template,
+                            product=product,
+                            producer=getattr(product, "producer", None) if product else None,
+                            product_name=item["name"],
+                            producer_name=item["producer"],
+                            unit_display=item["unit_display"],
+                            price=item["price"],
+                            quantity=item["quantity"],
+                        )
+
+                messages.success(
+                    request,
+                    f"Recurring order saved. Your next order will be placed on "
+                    f"{next_run.strftime('%A %d %b %Y')} for delivery on "
+                    f"{next_delivery.strftime('%A %d %b %Y')}.",
+                )
+
             request.session["basket"] = {}
             request.session.modified = True
 
@@ -512,6 +606,7 @@ def checkout(request):
                 "producer_groups": confirmation_groups,
                 "total_food_miles": total_food_miles,
                 "customer_postcode": customer_postcode,
+                "recurring_template": recurring_template,
             })
     else:
         form = PaymentForm(initial=initial_data)
@@ -573,7 +668,7 @@ def order_history(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(
-        Order.objects.prefetch_related("items__product__producer", "producer_orders"),
+        Order.objects.prefetch_related("items__product__producer", "producer_orders", "status_history__order_item"),
         id=order_id,
         user=request.user,
     )
@@ -667,4 +762,156 @@ def basket_distance_map_api(request):
         "customer": customer_coords,
         "producer": producer_coords,
         "distance_miles": distance_miles,
+    })
+
+
+# ---------------------------------------------------------------------------
+# TC-018: Recurring orders management
+# ---------------------------------------------------------------------------
+@login_required
+def recurring_orders_list(request):
+    """List page for the customer's recurring order templates."""
+    templates = (
+        RecurringOrder.objects
+        .filter(user=request.user)
+        .prefetch_related("items")
+        .order_by("-created_at")
+    )
+
+    enriched = []
+    for template in templates:
+        items = list(template.items.all())
+
+        # Detect any unavailable products to surface a warning to the restaurant.
+        unavailable = []
+        for item in items:
+            product = item.product
+            if not product or not product.is_visible_to_customers or product.stock <= 0:
+                unavailable.append(item.product_name)
+
+        enriched.append({
+            "template": template,
+            "items": items,
+            "template_total": template.template_total,
+            "unavailable_items": unavailable,
+        })
+
+    return render(request, "basket/recurring_orders_list.html", {
+        "templates": enriched,
+    })
+
+
+@login_required
+def recurring_order_detail(request, recurring_id):
+    template = get_object_or_404(
+        RecurringOrder.objects.prefetch_related("items__product__producer"),
+        id=recurring_id,
+        user=request.user,
+    )
+
+    items = list(template.items.all())
+
+    # Group items by producer so the restaurant can see who supplies what.
+    producer_groups = {}
+    for item in items:
+        key = item.producer_name or "Unknown Producer"
+        producer_groups.setdefault(key, []).append(item)
+
+    unavailable_items = []
+    for item in items:
+        product = item.product
+        if not product or not product.is_visible_to_customers or product.stock <= 0:
+            unavailable_items.append(item.product_name)
+
+    return render(request, "basket/recurring_order_detail.html", {
+        "template": template,
+        "items": items,
+        "producer_groups": producer_groups,
+        "unavailable_items": unavailable_items,
+    })
+
+
+@login_required
+@require_POST
+def recurring_order_pause(request, recurring_id):
+    template = get_object_or_404(
+        RecurringOrder, id=recurring_id, user=request.user
+    )
+
+    if template.status == RecurringOrder.STATUS_ACTIVE:
+        template.status = RecurringOrder.STATUS_PAUSED
+        template.save(update_fields=["status", "updated_at"])
+        messages.success(request, "Recurring order paused. No further orders will be generated until resumed.")
+    elif template.status == RecurringOrder.STATUS_PAUSED:
+        template.status = RecurringOrder.STATUS_ACTIVE
+        template.save(update_fields=["status", "updated_at"])
+        messages.success(request, "Recurring order resumed.")
+    else:
+        messages.error(request, "Cancelled recurring orders cannot be resumed.")
+
+    return redirect("basket:recurring_order_detail", recurring_id=template.id)
+
+
+@login_required
+@require_POST
+def recurring_order_cancel(request, recurring_id):
+    template = get_object_or_404(
+        RecurringOrder, id=recurring_id, user=request.user
+    )
+    template.status = RecurringOrder.STATUS_CANCELLED
+    template.save(update_fields=["status", "updated_at"])
+    messages.success(request, "Recurring order cancelled.")
+    return redirect("basket:recurring_orders_list")
+
+
+@login_required
+def recurring_order_modify_next(request, recurring_id):
+    """
+    Per the acceptance criteria, modifications can be applied either to the
+    next instance only (so the template stays untouched) or to the template
+    itself going forward.
+    """
+    template = get_object_or_404(
+        RecurringOrder.objects.prefetch_related("items"),
+        id=recurring_id,
+        user=request.user,
+    )
+
+    if request.method == "POST":
+        scope = request.POST.get("scope", "next_only")
+
+        for item in template.items.all():
+            field_name = f"quantity_{item.id}"
+            raw_value = request.POST.get(field_name)
+            if raw_value in (None, ""):
+                continue
+            try:
+                new_quantity = int(raw_value)
+            except (TypeError, ValueError):
+                continue
+            new_quantity = max(0, new_quantity)
+
+            if scope == "template":
+                # Apply permanently; clear per-instance override.
+                item.quantity = new_quantity
+                item.next_quantity_override = None
+                item.save(update_fields=["quantity", "next_quantity_override"])
+            else:
+                # Apply only to the next generated order.
+                if new_quantity == item.quantity:
+                    item.next_quantity_override = None
+                else:
+                    item.next_quantity_override = new_quantity
+                item.save(update_fields=["next_quantity_override"])
+
+        if scope == "template":
+            messages.success(request, "Recurring template updated. Future orders will use the new quantities.")
+        else:
+            messages.success(request, "Next scheduled order updated. The template is unchanged.")
+
+        return redirect("basket:recurring_order_detail", recurring_id=template.id)
+
+    return render(request, "basket/recurring_order_modify.html", {
+        "template": template,
+        "items": list(template.items.all()),
     })
