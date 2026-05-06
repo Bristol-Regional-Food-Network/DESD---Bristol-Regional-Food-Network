@@ -86,6 +86,9 @@
                 <h3 class="h6 mb-1">{{ item.name }}</h3>
                 <div class="text-muted small">£{{ item.price|floatformat:2 }} per {{ item.unit_display }}</div>
                 <div class="small">Subtotal: £{{ item.subtotal|floatformat:2 }}</div>
+                <div class="small {% if item.has_allergen_warning %}text-warning{% else %}text-muted{% endif %}">
+                  <strong>Allergens:</strong> {{ item.allergen_info }}
+                </div>
 
                 {% if item.food_miles is not None %}
                   <div class="small text-muted">Estimated food miles: {{ item.food_miles }} miles</div>

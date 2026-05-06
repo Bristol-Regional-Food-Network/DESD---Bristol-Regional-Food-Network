@@ -6,6 +6,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from .forms import (
     CustomerRegistrationForm,
     ProducerRegistrationForm,
+    CommunityGroupRegistrationForm,
+    RestaurantRegistrationForm,
     EmployeeRegistrationForm,
 )
 from .models import UserProfile
@@ -63,6 +65,59 @@ def producer_register(request):
         form = ProducerRegistrationForm()
 
     return render(request, "auth/register_producer.html", {"form": form})
+
+
+def community_group_register(request):
+    if request.method == "POST":
+        form = CommunityGroupRegistrationForm(request.POST)
+
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data["password"])
+            user.save()
+
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            profile.role = "community_group"
+            profile.organisation_name = form.cleaned_data.get("organisation_name")
+            profile.organisation_type = form.cleaned_data.get("organisation_type")
+            profile.contact_name = form.cleaned_data.get("contact_name")
+            profile.address = form.cleaned_data.get("address")
+            profile.postcode = form.cleaned_data.get("postcode")
+            profile.admin_approved = True
+            profile.save()
+
+            login(request, user)
+            return redirect("/")
+    else:
+        form = CommunityGroupRegistrationForm()
+
+    return render(request, "auth/register_community_group.html", {"form": form})
+
+
+def restaurant_register(request):
+    if request.method == "POST":
+        form = RestaurantRegistrationForm(request.POST)
+
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.set_password(form.cleaned_data["password"])
+            user.save()
+
+            profile, created = UserProfile.objects.get_or_create(user=user)
+            profile.role = "restaurant"
+            profile.business_name = form.cleaned_data.get("business_name")
+            profile.contact_name = form.cleaned_data.get("contact_name")
+            profile.address = form.cleaned_data.get("address")
+            profile.postcode = form.cleaned_data.get("postcode")
+            profile.admin_approved = True
+            profile.save()
+
+            login(request, user)
+            return redirect("/")
+    else:
+        form = RestaurantRegistrationForm()
+
+    return render(request, "auth/register_restaurant.html", {"form": form})
 
 
 def employee_register(request):

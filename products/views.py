@@ -162,6 +162,8 @@ def _product_to_dict(product: Product):
         "id": product.id,
         "name": product.name,
         "description": product.description,
+        "allergen_info": product.allergen_display,
+        "has_allergen_warning": product.has_allergen_warning,
         "price": str(product.price),
         "stock": product.stock,
         "is_organic": product.is_organic,
@@ -268,6 +270,7 @@ def _visible_products_queryset():
 def product_list(request):
     selected_category = request.GET.get("category", "all")
     selected_organic = request.GET.get("organic", "all")
+    selected_allergen = request.GET.get("allergen", "all")
     q = request.GET.get("q", "").strip()
 
     visible_products = _visible_products_queryset()
@@ -279,6 +282,7 @@ def product_list(request):
             if (
                 q_lower in p.name.lower()
                 or q_lower in (p.description or "").lower()
+                or q_lower in (p.allergen_info or "").lower()
                 or q_lower in (getattr(p.producer, "display_name", "") or "").lower()
                 or q_lower in (getattr(p.producer, "farm_name", "") or "").lower()
             )
@@ -291,6 +295,11 @@ def product_list(request):
         visible_products = [p for p in visible_products if p.is_organic]
     elif selected_organic == "not_certified":
         visible_products = [p for p in visible_products if not p.is_organic]
+
+    if selected_allergen == "contains_allergens":
+        visible_products = [p for p in visible_products if p.has_allergen_warning]
+    elif selected_allergen == "no_common_allergens":
+        visible_products = [p for p in visible_products if not p.has_allergen_warning]
 
     surplus_products = [p for p in visible_products if p.is_surplus_active]
     seasonal_products = [
@@ -320,6 +329,12 @@ def product_list(request):
         ("all", "All Products"),
         ("certified", "Certified Organic"),
         ("not_certified", "Not Certified"),
+    ]
+
+    allergen_options = [
+        ("all", "All Allergen Statuses"),
+        ("contains_allergens", "Contains allergens"),
+        ("no_common_allergens", "No common allergens listed"),
     ]
 
     saved = request.session.get("saved_products", {})
@@ -373,8 +388,10 @@ def product_list(request):
             "all_products": all_products,
             "categories": categories,
             "organic_options": organic_options,
+            "allergen_options": allergen_options,
             "selected_category": selected_category,
             "selected_organic": selected_organic,
+            "selected_allergen": selected_allergen,
             "query": q,
             "saved_items": saved_items,
             "recommended_products": recommended_products,
@@ -659,6 +676,7 @@ def api_product_collection(request: HttpRequest):
         category = request.GET.get("category")
         visible_only = request.GET.get("visible_only")
         organic = request.GET.get("organic")
+        allergen = request.GET.get("allergen")
 
         if producer_id:
             products = products.filter(producer_id=producer_id)
@@ -666,6 +684,7 @@ def api_product_collection(request: HttpRequest):
             products = products.filter(
                 Q(name__icontains=q)
                 | Q(description__icontains=q)
+                | Q(allergen_info__icontains=q)
                 | Q(producer__display_name__icontains=q)
                 | Q(producer__farm_name__icontains=q)
             ).distinct()
@@ -675,6 +694,8 @@ def api_product_collection(request: HttpRequest):
             products = products.filter(is_organic=True)
         elif organic == "false":
             products = products.filter(is_organic=False)
+        if allergen:
+            products = products.filter(allergen_info__icontains=allergen)
 
         product_list_result = list(products)
         if visible_only == "true":
@@ -728,6 +749,7 @@ def api_product_collection(request: HttpRequest):
 
     is_surplus = bool(payload.get("is_surplus", False))
     surplus_note = str(payload.get("surplus_note", "")).strip()
+    allergen_info = str(payload.get("allergen_info", "")).strip() or "No common allergens listed"
     best_before_date = payload.get("best_before_date")
     surplus_expires_at = payload.get("surplus_expires_at")
 
@@ -741,6 +763,7 @@ def api_product_collection(request: HttpRequest):
         producer=producer,
         name=str(payload.get("name", "")).strip(),
         description=str(payload.get("description", "")).strip(),
+        allergen_info=allergen_info,
         price=price,
         stock=stock,
         is_organic=bool(payload.get("is_organic", False)),
@@ -796,6 +819,8 @@ def api_product_resource(request: HttpRequest, product_id: int):
         product.name = str(payload["name"]).strip()
     if "description" in payload:
         product.description = str(payload["description"]).strip()
+    if "allergen_info" in payload:
+        product.allergen_info = str(payload["allergen_info"]).strip() or "No common allergens listed"
 
     if "price" in payload:
         try:

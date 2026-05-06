@@ -78,8 +78,12 @@ def _postcode_coordinates(postcode):
     if not postcode:
         return None
 
-    nomi = pgeocode.Nominatim("GB")
-    result = nomi.query_postal_code(postcode)
+    try:
+        nomi = pgeocode.Nominatim("GB")
+        result = nomi.query_postal_code(postcode)
+    except Exception:
+        # Keep checkout/basket usable if postcode data cannot be downloaded/cached.
+        return None
 
     if result is None:
         return None
@@ -187,6 +191,8 @@ def _build_checkout_groups(basket, customer_postcode=""):
             "name": product.name,
             "producer": producer_name,
             "unit_display": getattr(product, "unit_display", "each"),
+            "allergen_info": product.allergen_display,
+            "has_allergen_warning": product.has_allergen_warning,
             "price": current_price,
             "quantity": quantity,
             "subtotal": subtotal,
@@ -206,6 +212,8 @@ def _build_checkout_groups(basket, customer_postcode=""):
             "producer": producer_name,
             "producer_postcode": producer_postcode,
             "unit_display": getattr(product, "unit_display", "each"),
+            "allergen_info": product.allergen_display,
+            "has_allergen_warning": product.has_allergen_warning,
         }
 
         if basket.get(str(product.id)) != updated_session_item:
@@ -289,6 +297,8 @@ def basket_add(request, product_id):
             "producer": product.producer.display_name,
             "producer_postcode": getattr(product.producer, "postcode", ""),
             "unit_display": getattr(product, "unit_display", "each"),
+            "allergen_info": product.allergen_display,
+            "has_allergen_warning": product.has_allergen_warning,
         }
 
     request.session.modified = True
@@ -326,6 +336,8 @@ def basket_update(request, product_id):
             basket[product_id]["producer"] = getattr(product.producer, "display_name", "Unknown Producer")
             basket[product_id]["producer_postcode"] = getattr(product.producer, "postcode", "")
             basket[product_id]["unit_display"] = getattr(product, "unit_display", "each")
+            basket[product_id]["allergen_info"] = product.allergen_display
+            basket[product_id]["has_allergen_warning"] = product.has_allergen_warning
 
         request.session.modified = True
 
@@ -447,6 +459,7 @@ def checkout(request):
                     city=cleaned["city"],
                     postcode=cleaned["postcode"],
                     country=cleaned["country"],
+                    special_delivery_instructions=cleaned.get("special_delivery_instructions", ""),
                     delivery_date=parent_delivery_date,
                     payment_reference=payment_reference,
                     total_amount=grand_total,
@@ -463,6 +476,7 @@ def checkout(request):
                     city=cleaned["city"],
                     postcode=cleaned["postcode"],
                     country=cleaned["country"],
+                    special_delivery_instructions=cleaned.get("special_delivery_instructions", ""),
                     delivery_date=parent_delivery_date,
                     payment_reference=payment_reference,
                     total_amount=grand_total,
@@ -651,7 +665,7 @@ def order_history(request):
 @login_required
 def order_detail(request, order_id):
     order = get_object_or_404(
-        Order.objects.prefetch_related("items__product__producer", "producer_orders"),
+        Order.objects.prefetch_related("items__product__producer", "producer_orders", "status_history__order_item"),
         id=order_id,
         user=request.user,
     )

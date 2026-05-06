@@ -84,6 +84,10 @@ class Product(models.Model):
     )
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    allergen_info = models.TextField(
+        default="No common allergens listed",
+        help_text="Clearly list allergens such as milk, eggs, nuts, gluten, or state that no common allergens are listed."
+    )
     price = models.DecimalField(max_digits=8, decimal_places=2)
     stock = models.PositiveIntegerField(default=0)
     is_organic = models.BooleanField(default=False)
@@ -159,6 +163,22 @@ class Product(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def allergen_display(self):
+        value = (self.allergen_info or "").strip()
+        return value or "No common allergens listed"
+
+    @property
+    def has_allergen_warning(self):
+        value = self.allergen_display.lower()
+        no_allergen_phrases = [
+            "no common allergens listed",
+            "no common allergens",
+            "none",
+            "n/a",
+        ]
+        return not any(value == phrase or value.startswith(f"{phrase}.") for phrase in no_allergen_phrases)
 
     @property
     def discounted_price(self):

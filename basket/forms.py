@@ -74,6 +74,17 @@ class PaymentForm(forms.Form):
         widget=forms.TextInput(attrs={"class": "form-control"})
     )
 
+
+    special_delivery_instructions = forms.CharField(
+        required=False,
+        max_length=1000,
+        widget=forms.Textarea(attrs={
+            "class": "form-control",
+            "rows": 3,
+            "placeholder": "Optional delivery notes, e.g. leave with reception or deliver to kitchen entrance",
+        })
+    )
+
     def clean_card_number(self):
         card_number = self.cleaned_data["card_number"].replace(" ", "")
         if not card_number.isdigit():

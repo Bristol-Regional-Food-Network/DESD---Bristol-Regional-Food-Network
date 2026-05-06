@@ -17,6 +17,11 @@
                 {% for rec in recommended_products %}
                     <div class="col-md-6 col-lg-4">
                         <div class="card shadow-sm h-100 rounded-4 border">
+                            {% if rec.product.image %}
+                                <img src="{{ rec.product.image.url }}" alt="{{ rec.product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
                             <div class="card-body d-flex flex-column">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h5 class="card-title mb-0">{{ rec.product.name }}</h5>
@@ -31,6 +36,9 @@
 
                                 <p class="small mb-1"><strong>Producer:</strong> {{ rec.product.producer.display_name }}</p>
                                 <p class="small mb-1"><strong>Category:</strong> {{ rec.product.get_category_display }}</p>
+                                <p class="small mb-2">
+                                    <strong>Allergens:</strong> {{ rec.product.allergen_display|truncatechars:60 }}
+                                </p>
 
                                 <div class="mb-2">
                                     {% if rec.product.is_organic %}
@@ -103,10 +111,20 @@
                 </select>
             </div>
 
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <select name="organic" class="form-select">
                     {% for value, label in organic_options %}
                         <option value="{{ value }}" {% if selected_organic == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <select name="allergen" class="form-select">
+                    {% for value, label in allergen_options %}
+                        <option value="{{ value }}" {% if selected_allergen == value %}selected{% endif %}>
                             {{ label }}
                         </option>
                     {% endfor %}
@@ -175,6 +193,11 @@
                     {% for product in surplus_products %}
                         <div class="col-md-6 col-lg-4">
                             <div class="card shadow-sm h-100 rounded-4 border-warning">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
                                 <div class="card-body d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h5 class="card-title mb-0">{{ product.name }}</h5>
@@ -187,6 +210,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -232,6 +258,11 @@
                     {% for product in seasonal_products %}
                         <div class="col-md-6 col-lg-4">
                             <div class="card shadow-sm h-100 rounded-4">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
                                 <div class="card-body d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h5 class="card-title mb-0">{{ product.name }}</h5>
@@ -244,6 +275,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -297,6 +331,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -331,6 +368,11 @@
                     {% for product in all_products %}
                         <div class="col-md-6 col-lg-4">
                             <div class="card shadow-sm h-100 rounded-4 {% if product.is_surplus_active %}border-warning{% endif %}">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
                                 <div class="card-body d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h5 class="card-title mb-0">{{ product.name }}</h5>
@@ -350,6 +392,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -412,6 +457,11 @@
                     {% for product in surplus_products %}
                         <div class="col-md-6 col-lg-4">
                             <div class="card shadow-sm h-100 rounded-4 border-warning">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
                                 <div class="card-body d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h5 class="card-title mb-0">{{ product.name }}</h5>
@@ -424,6 +474,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -487,6 +540,11 @@
                     {% for product in seasonal_products %}
                         <div class="col-md-6 col-lg-4">
                             <div class="card shadow-sm h-100 rounded-4">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
                                 <div class="card-body d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h5 class="card-title mb-0">{{ product.name }}</h5>
@@ -499,6 +557,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -574,6 +635,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}
@@ -625,6 +689,11 @@
                     {% for product in all_products %}
                         <div class="col-md-6 col-lg-4">
                             <div class="card shadow-sm h-100 rounded-4 {% if product.is_surplus_active %}border-warning{% endif %}">
+                            {% if product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}" class="card-img-top" style="height:180px;object-fit:cover;">
+                            {% else %}
+                                <div class="bg-light d-flex align-items-center justify-content-center" style="height:180px;"><span class="text-muted small">No image</span></div>
+                            {% endif %}
                                 <div class="card-body d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <h5 class="card-title mb-0">{{ product.name }}</h5>
@@ -644,6 +713,9 @@
 
                                     <p class="small mb-1"><strong>Producer:</strong> {{ product.producer.display_name }}</p>
                                     <p class="small mb-1"><strong>Category:</strong> {{ product.get_category_display }}</p>
+                                    <p class="small mb-2">
+                                        <strong>Allergens:</strong> {{ product.allergen_display|truncatechars:60 }}
+                                    </p>
 
                                     <div class="mb-2">
                                         {% if product.is_organic %}

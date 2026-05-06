@@ -31,6 +31,13 @@
                             {% if form.description.errors %}<div class="text-danger small">{{ form.description.errors }}</div>{% endif %}
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label">{{ form.allergen_info.label }}</label>
+                            {{ form.allergen_info }}
+                            <div class="form-text">List known allergens clearly, or state "No common allergens listed".</div>
+                            {% if form.allergen_info.errors %}<div class="text-danger small">{{ form.allergen_info.errors }}</div>{% endif %}
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">{{ form.price.label }}</label>

@@ -71,7 +71,7 @@
                     </a>
 
                     <!-- BAG (CUSTOMER ONLY) -->
-                    {% if user.userprofile.role == "customer" %}
+                    {% if user.userprofile.role == "customer" or user.userprofile.role == "community_group" or user.userprofile.role == "restaurant" %}
                     <li class="nav-item">
                         <a class="btn btn-outline-light btn-sm" href="{% url 'basket:basket_detail' %}">
                             Bag ({{ request.session.basket|length|default:0 }})

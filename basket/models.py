@@ -39,6 +39,7 @@ class Order(models.Model):
     city = models.CharField(max_length=100)
     postcode = models.CharField(max_length=20)
     country = models.CharField(max_length=100, default="UK")
+    special_delivery_instructions = models.TextField(blank=True, default="")
 
     delivery_date = models.DateField()
     payment_reference = models.CharField(max_length=50, blank=True, default="")
@@ -152,6 +153,42 @@ class OrderItem(models.Model):
         quantity = self.quantity if self.quantity is not None else 0
         return quantity * price
 
+
+
+
+class OrderStatusHistory(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="status_history")
+    order_item = models.ForeignKey(
+        OrderItem,
+        on_delete=models.CASCADE,
+        related_name="status_history",
+        null=True,
+        blank=True,
+    )
+    producer_order = models.ForeignKey(
+        ProducerOrder,
+        on_delete=models.CASCADE,
+        related_name="status_history",
+        null=True,
+        blank=True,
+    )
+    old_status = models.CharField(max_length=20)
+    new_status = models.CharField(max_length=20)
+    note = models.TextField(blank=True)
+    changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="order_status_updates",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Order #{self.order_id}: {self.old_status} → {self.new_status}"
 
 # ---------------------------------------------------------------------------
 # Recurring orders (TC-018)
