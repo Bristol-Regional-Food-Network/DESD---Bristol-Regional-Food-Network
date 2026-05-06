@@ -1,8 +1,49 @@
-venv
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Environment variables
 .env
-.venv
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Database
 db.sqlite3
+
+# Static files
 staticfiles/
+
+# Jupyter Notebook
 .ipynb_checkpoints/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Coverage / testing
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Build files
+build/
+dist/
+*.egg-info/
+
+# Media uploads (optional)
+# media/
+
+# Docker overrides
+docker-compose.override.yml
